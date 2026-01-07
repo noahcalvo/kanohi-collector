@@ -1,0 +1,12 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Chest</title>
+  <g opacity="0.95" fill="currentColor">
+    <path opacity="0.10" d="M36 112c0-8.837 7.163-16 16-16h152c8.837 0 16 7.163 16 16v88c0 11.046-8.954 20-20 20H56c-11.046 0-20-8.954-20-20v-88Z"/>
+    <path opacity="0.18" d="M52 76c0-11.046 8.954-20 20-20h112c11.046 0 20 8.954 20 20v28H52V76Z"/>
+    <path opacity="0.28" d="M52 104h152v36c0 8.837-7.163 16-16 16H68c-8.837 0-16-7.163-16-16v-36Z"/>
+    <path opacity="0.45" d="M112 104h32v52c0 4.418-3.582 8-8 8h-16c-4.418 0-8-3.582-8-8v-52Z"/>
+    <path opacity="0.12" d="M60 84h136v12H60V84Z"/>
+  </g>
+  <path d="M52 104h152" stroke="currentColor" stroke-opacity="0.25" stroke-width="2"/>
+  <path d="M52 96h152" stroke="currentColor" stroke-opacity="0.18" stroke-width="2"/>
+</svg>
