@@ -31,7 +31,7 @@ Vitest covers pack open consumption, pity guarantee, and equip slot exclusivity.
 - Rarity math and buffs with 20% pack luck cap.
 - Pity after 20 packs guarantees at least one rare+ item in next pack.
 - Discovery rerolls up to 3 attempts, capped at 50% probability.
-- Duplicate essence and leveling with consumptive costs per rarity.
+- Duplicate protodermis and leveling with consumptive costs per rarity.
 - In-memory store with `resetStore()` for tests; swap with Postgres/Redis per design doc.
 
 ## Next steps

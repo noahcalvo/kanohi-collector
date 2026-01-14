@@ -1,22 +1,27 @@
 "use client";
 
+import { Home, Package, Users, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
-  { href: "/", label: "Home" },
-  { href: "/collection", label: "Collection" },
-  { href: "/friends", label: "Friends" },
-  { href: "/shop", label: "Shop/Events" },
+  { href: "/", label: "Home", Icon: Home },
+  { href: "/collection", label: "Collection", Icon: Package },
+  { href: "/friends", label: "Friends", Icon: Users },
+  { href: "/shop", label: "Shop/Events", Icon: ShoppingBag },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="card p-2 flex items-center gap-2" aria-label="Primary">
+    <nav
+      className="opaque-card p-2 flex items-center gap-2 bg-white/100"
+      aria-label="Primary"
+    >
       {items.map((item) => {
         const active = pathname === item.href;
+        const Icon = item.Icon;
         return (
           <Link
             key={item.href}
@@ -29,7 +34,8 @@ export function BottomNav() {
                 : "bg-white/70 text-slate-900 border border-slate-200/70 hover:bg-white/80")
             }
           >
-            {item.label}
+            <Icon className="block md:hidden w-5 h-5 mx-auto" />
+            <span className="hidden md:block">{item.label}</span>
           </Link>
         );
       })}

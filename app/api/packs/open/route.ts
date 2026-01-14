@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { openPack } from "../../../../lib/engine";
 import { z } from "zod";
+import { openPack } from "../../../../lib/engine";
 
-const schema = z.object({ pack_id: z.string(), client_request_id: z.string().uuid() });
+const schema = z.object({
+  pack_id: z.string(),
+  client_request_id: z.string().uuid(),
+});
 const USER_ID = "user-1";
 const IDEMPOTENCY_TTL_MS = 60_000;
 const recent = new Map<string, { result: unknown; expires: number }>();
@@ -10,6 +13,7 @@ const recent = new Map<string, { result: unknown; expires: number }>();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log("[packs/open] Request body:", body);
     const parsed = schema.parse(body);
     const now = Date.now();
     const cached = recent.get(parsed.client_request_id);
@@ -20,10 +24,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unknown pack" }, { status: 400 });
     }
     const result = openPack(USER_ID, parsed.pack_id);
-    recent.set(parsed.client_request_id, { result, expires: now + IDEMPOTENCY_TTL_MS });
+    recent.set(parsed.client_request_id, {
+      result,
+      expires: now + IDEMPOTENCY_TTL_MS,
+    });
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[packs/open] Error:", message, err);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -4,11 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenResult } from "../../lib/types";
 import type { PackOverlayStage } from "../components/PackOpeningModal";
 
-type ToastItem = {
-  id: string;
-  message: string;
-};
-
 export function usePackOpening(args: {
   packReady: boolean;
   refreshStatus: () => void;
@@ -21,25 +16,20 @@ export function usePackOpening(args: {
   const [revealedCount, setRevealedCount] = useState(0);
 
   const [packOverlayOpen, setPackOverlayOpen] = useState(false);
-  const [packOverlayStage, setPackOverlayStage] = useState<PackOverlayStage>("idle");
-  const [packOverlayAnimationDone, setPackOverlayAnimationDone] = useState(false);
-  const packOverlayTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const [packOverlayStage, setPackOverlayStage] =
+    useState<PackOverlayStage>("idle");
+  const [packOverlayAnimationDone, setPackOverlayAnimationDone] =
+    useState(false);
+  const packOverlayTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>(
+    []
+  );
   const toastTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
 
   const [packError, setPackError] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const pushToast = useCallback((message: string) => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setToasts((prev) => [...prev, { id, message }]);
-    const timeout = setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 2200);
-    toastTimeoutsRef.current.push(timeout);
-  }, []);
 
   const closePackOverlay = useCallback(() => {
-    const canClose = packOverlayStage === "done" || packOverlayStage === "error";
+    const canClose =
+      packOverlayStage === "done" || packOverlayStage === "error";
     if (!canClose) return;
     packOverlayTimeoutsRef.current.forEach(clearTimeout);
     packOverlayTimeoutsRef.current = [];
@@ -48,7 +38,9 @@ export function usePackOpening(args: {
     setPackOverlayOpen(false);
     setPackOverlayStage("idle");
     setPackOverlayAnimationDone(false);
-  }, [packOverlayStage]);
+    // Refresh user data after modal closes to avoid background updates during animation
+    refreshMe();
+  }, [packOverlayStage, refreshMe]);
 
   const clearPackError = useCallback(() => {
     setPackError(null);
@@ -58,12 +50,11 @@ export function usePackOpening(args: {
     if (packOverlayStage === "revealing_first") {
       setPackOverlayStage("revealing_second");
       const m = results?.masks[1];
-      if (m && !m.is_new && m.essence_awarded > 0) pushToast(`+${m.essence_awarded} Essence`);
-      if (m && m.level_after > m.level_before) pushToast(`${m.name}: Level ${m.level_after}`);
+      // Color unlock now uses particles + popup in modal overlay
     } else if (packOverlayStage === "revealing_second") {
       setPackOverlayStage("revealing_both");
     }
-  }, [packOverlayStage, pushToast, results]);
+  }, [packOverlayStage, results]);
 
   useEffect(() => {
     if (!results) {
@@ -78,19 +69,16 @@ export function usePackOpening(args: {
     if (packOverlayStage !== "waiting") return;
 
     const timeouts: Array<ReturnType<typeof setTimeout>> = [];
-    
+
     // Auto-show first mask after chest animation
     timeouts.push(
       setTimeout(() => {
         setPackOverlayStage("revealing_first");
-        const m = results.masks[0];
-        if (m && !m.is_new && m.essence_awarded > 0) pushToast(`+${m.essence_awarded} Essence`);
-        if (m && m.level_after > m.level_before) pushToast(`${m.name}: Level ${m.level_after}`);
-      }, 250),
+      }, 250)
     );
 
     packOverlayTimeoutsRef.current.push(...timeouts);
-  }, [packOverlayAnimationDone, packOverlayOpen, packOverlayStage, pushToast, results]);
+  }, [packOverlayAnimationDone, packOverlayOpen, packOverlayStage, results]);
 
   useEffect(() => {
     if (packOverlayStage === "revealing_both") {
@@ -102,7 +90,8 @@ export function usePackOpening(args: {
   }, [packOverlayStage]);
 
   useEffect(() => {
-    const canClose = packOverlayStage === "done" || packOverlayStage === "error";
+    const canClose =
+      packOverlayStage === "done" || packOverlayStage === "error";
     if (!packOverlayOpen || !canClose) return;
 
     function onKeyDown(e: KeyboardEvent) {
@@ -140,23 +129,25 @@ export function usePackOpening(args: {
     setPackError(null);
     setResults(null);
     setRevealedCount(0);
-    setToasts([]);
 
     packOverlayTimeoutsRef.current.push(
       setTimeout(() => {
         setPackOverlayStage("waiting");
-      }, 900),
+      }, 900)
     );
     packOverlayTimeoutsRef.current.push(
       setTimeout(() => {
         setPackOverlayAnimationDone(true);
-      }, 1250),
+      }, 1250)
     );
 
     const res = await fetch("/api/packs/open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pack_id: "free_daily_v1", client_request_id: crypto.randomUUID() }),
+      body: JSON.stringify({
+        pack_id: "free_daily_v1",
+        client_request_id: crypto.randomUUID(),
+      }),
     });
 
     if (!res.ok) {
@@ -170,7 +161,7 @@ export function usePackOpening(args: {
     setResults(data);
     setOpening(false);
     refreshStatus();
-    refreshMe();
+    // Don't refresh user data yet - wait until modal closes to avoid background updates
   }, [opening, packReady, refreshMe, refreshStatus]);
 
   return {
@@ -184,8 +175,6 @@ export function usePackOpening(args: {
 
     packError,
     clearPackError,
-
-    toasts,
 
     openPack,
     closePackOverlay,

@@ -1,5 +1,11 @@
 export type Rarity = "COMMON" | "RARE" | "MYTHIC";
-export type BuffType = "PACK_LUCK" | "TIMER_SPEED" | "DUPLICATE_EFF" | "DISCOVERY" | "VISUAL";
+export type BuffType =
+  | "PACK_LUCK"
+  | "TIMER_SPEED"
+  | "DUPLICATE_EFF"
+  | "DISCOVERY"
+  | "VISUAL"
+  | "INSPECT";
 export type EquipSlot = "NONE" | "TOA" | "TURAGA";
 
 export interface Mask {
@@ -7,13 +13,15 @@ export interface Mask {
   generation: number;
   name: string;
   base_rarity: Rarity;
-  base_color_distribution: Record<string, number>;
-  base_image_ids: Record<string, string>;
   buff_type: BuffType;
   buff_base_value: number;
   max_level: number;
   description: string;
+  original_color: string;
   is_unique_mythic?: boolean;
+  transparent?: boolean;
+  origin: string;
+  maskOffsetY?: number;
 }
 
 export interface User {
@@ -34,6 +42,7 @@ export interface UserMask {
   level: number;
   equipped_slot: EquipSlot;
   unlocked_colors: string[];
+  equipped_color: string;
   last_acquired_at: Date;
 }
 
@@ -77,6 +86,7 @@ export interface DrawResultItem {
   rarity: Rarity;
   color: string;
   is_new: boolean;
+  was_color_new: boolean;
   essence_awarded: number;
   essence_remaining: number;
   final_essence_remaining: number;
@@ -84,6 +94,7 @@ export interface DrawResultItem {
   level_after: number;
   final_level_after: number;
   unlocked_colors: string[];
+  transparent?: boolean;
 }
 
 export interface OpenResult {
@@ -94,12 +105,18 @@ export interface OpenResult {
 export interface CollectionMask {
   mask_id: string;
   name: string;
+  generation: number;
   rarity: Rarity;
   level: number;
   essence: number;
   owned_count: number;
   equipped_slot: EquipSlot;
   unlocked_colors: string[];
+  equipped_color: string;
+  transparent?: boolean;
+  buff_type: BuffType;
+  description: string;
+  origin: string;
 }
 
 export interface MePayload {
@@ -124,4 +141,5 @@ export interface BuffTotals {
   timer_speed: number;
   duplicate_eff: number;
   discovery: number;
+  inspect: number;
 }

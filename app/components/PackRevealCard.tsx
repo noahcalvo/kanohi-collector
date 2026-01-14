@@ -1,59 +1,88 @@
 "use client";
 
+import { useState } from "react";
+import { uiHex } from "../../lib/colors";
 import type { EquipSlot, DrawResultItem } from "../../lib/types";
+import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";
+import { ProtodermisProgressBar } from "./ProtodermisProgressBar";
+import SpotlightWrap from "./spotlight";
 
 function rarityClasses(rarity: DrawResultItem["rarity"]) {
   switch (rarity) {
     case "MYTHIC":
       return {
         ring: "ring-2 ring-emerald-200/70",
-        badge: "bg-emerald-50/80 text-emerald-700 border-emerald-200/70",
+        badge: "text-emerald-700 ",
       };
     case "RARE":
       return {
         ring: "ring-2 ring-sky-200/70",
-        badge: "bg-sky-50/80 text-sky-700 border-sky-200/70",
+        badge: "text-sky-700 ",
       };
     default:
       return {
         ring: "ring-1 ring-slate-200/60",
-        badge: "bg-white/60 text-slate-700 border-slate-200/70",
+        badge: "text-slate-800 ",
       };
   }
 }
 
-function colorDotClass(color: string) {
-  const c = color.toLowerCase();
-  if (c.includes("blue")) return "bg-sky-400";
-  if (c.includes("red")) return "bg-rose-400";
-  if (c.includes("green")) return "bg-emerald-400";
-  if (c.includes("purple")) return "bg-violet-400";
-  if (c.includes("yellow") || c.includes("gold")) return "bg-amber-400";
-  if (c.includes("black")) return "bg-slate-700";
-  if (c.includes("white")) return "bg-slate-200";
-  return "bg-slate-300";
-}
+// Color mapping and UI adjustments come from lib/colors
 
 export function PackRevealCard(props: {
   item: DrawResultItem;
   emphasis?: "focused" | "grid";
   visible?: boolean;
-  showFlare?: boolean;
-  onEquip?: (maskId: string, slot: EquipSlot) => void;
+  alreadySeen?: boolean;
+  onEquip?: (
+    maskId: string,
+    slot: EquipSlot,
+    color?: string,
+    transparent?: boolean
+  ) => void;
   equipping?: string | null;
   onClose?: () => void;
   canClose?: boolean;
   useFinalState?: boolean;
+  testText?: string;
+  currentToaEquipped?: {
+    maskId: string;
+    name: string;
+    color?: string;
+    transparent?: boolean;
+  } | null;
+  currentTuragaEquipped?: {
+    maskId: string;
+    name: string;
+    color?: string;
+    transparent?: boolean;
+  } | null;
 }) {
-  const { item, emphasis = "grid", visible = true, showFlare = false, onEquip, equipping, onClose, canClose, useFinalState = false } = props;
+  const {
+    item,
+    emphasis = "grid",
+    visible = true,
+    alreadySeen = false,
+    onEquip,
+    equipping,
+    onClose,
+    canClose,
+    useFinalState = false,
+    currentToaEquipped,
+    currentTuragaEquipped,
+  } = props;
 
+  const [showEquipPopup, setShowEquipPopup] = useState(false);
   const rarity = rarityClasses(item.rarity);
-  const equipLabel = (maskId: string, slot: EquipSlot) => `${maskId}-${slot}`;
 
   // Use final state when showing side-by-side, individual state when revealing one at a time
-  const displayLevel = useFinalState ? item.final_level_after : item.level_after;
-  const displayEssence = useFinalState ? item.final_essence_remaining : item.essence_remaining;
+  const displayLevel = useFinalState
+    ? item.final_level_after
+    : item.level_after;
+  const displayEssence = useFinalState
+    ? item.final_essence_remaining
+    : item.essence_remaining;
 
   return (
     <div
@@ -62,51 +91,54 @@ export function PackRevealCard(props: {
         (visible
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-2 pointer-events-none") +
-        (showFlare ? " animate-flare-in" : "")
+        (!alreadySeen && (item.is_new || item.was_color_new)
+          ? " animate-flare-in"
+          : "")
       }
     >
-      {showFlare && (
-        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-200/40 via-sky-200/30 to-amber-200/40 blur-xl animate-pulse-slow pointer-events-none" />
-      )}
       <div
         className={
-          "rounded-3xl bg-white/70 border border-slate-200/60 shadow-sm p-6 relative z-10 " +
-          rarity.ring +
-          " " +
-          (emphasis === "focused" ? "md:p-8" : "") +
-          (showFlare ? " ring-4 ring-emerald-200/70 shadow-lg" : "")
+          "shadow-sm p-6 relative z-10 " +
+          (alreadySeen !== true
+            ? "bg-white/0 "
+            : "bg-white/70 border rounded-3xl border-slate-200/60 " +
+              rarity.ring +
+              " " +
+              (emphasis === "focused" ? "md:p-8" : "") +
+              (!alreadySeen && (item.is_new || item.was_color_new)
+                ? " ring-4 ring-emerald-200/70 shadow-lg"
+                : ""))
         }
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div
-                className={
-                  "text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border " +
-                  rarity.badge
-                }
-              >
-                {item.rarity}
-              </div>
-              {item.is_new && (
-                <div className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-emerald-200/70 bg-emerald-50/80 text-emerald-700">
-                  New
-                </div>
-              )}
-            </div>
-            <div
-              className={
-                "mt-2 font-semibold text-slate-900 tracking-tight " +
-                (emphasis === "focused" ? "text-xl" : "text-base")
-              }
-            >
-              {item.name}
-            </div>
+        <div
+          className={
+            "text-[11px] font-semibold uppercase " +
+            rarity.badge +
+            (!alreadySeen ? "hidden" : "not")
+          }
+        >
+          {item.rarity}
+        </div>
+        <div
+          className={
+            "relative flex items-start " +
+            (!alreadySeen ? "justify-center" : "justify-between gap-4")
+          }
+        >
+          <div
+            className={
+              "font-semibold tracking-tight line-clamp-2 min-h-[2.8rem] font-voya-nui " +
+              (!alreadySeen ? "text-center " : "") +
+              (emphasis === "focused" ? "text-xl " : "text-base ") +
+              (alreadySeen ? " text-slate-900" : "text-slate-300")
+            }
+          >
+            {item.name}
           </div>
 
           {onClose && (
             <button
-              className="button-secondary text-xs"
+              className="button-secondary text-xs absolute right-0 top-0"
               onClick={onClose}
               disabled={!canClose}
             >
@@ -114,140 +146,106 @@ export function PackRevealCard(props: {
             </button>
           )}
         </div>
+        <div className="flex items-center gap-2 flex-wrap mt-1 min-h-[28px]">
+          {alreadySeen === true && (
+            <>
+              {item.is_new && (
+                <div className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-orange-200/70 bg-white/85 text-orange-700">
+                  New Mask
+                </div>
+              )}
+              {item.was_color_new && item.color !== "standard" && (
+                <div
+                  className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-white/85 relative overflow-hidden"
+                  style={{
+                    borderColor: uiHex(item.color, "pillText"),
+                    color: uiHex(item.color, "pillText"),
+                  }}
+                >
+                  <span className="relative z-10">New Color</span>
+                  <span className="shimmer-soft rounded-full"></span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         <div className="mt-6 flex items-center justify-center">
-          <div className="pack-hero">
-            <HeroImage
-              maskId={item.mask_id}
-              alt={item.name}
-              color={item.color}
-            />
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="h-32 w-32 rounded-full bg-white/70 blur-2xl mix-blend-screen" />
+            </div>
+            <SpotlightWrap on={!alreadySeen}>
+              <div
+                className={
+                  "pack-hero relative z-10" +
+                  (item.is_new || item.was_color_new
+                    ? " animate-pulse-opaque"
+                    : "")
+                }
+              >
+                <HeroImage
+                  maskId={item.mask_id}
+                  alt={item.name}
+                  color={item.color}
+                  transparent={item.transparent}
+                />
+              </div>
+            </SpotlightWrap>
           </div>
         </div>
 
-        {/* Essence Progress Bar */}
-        <div className="mt-4 space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span className="font-semibold relative inline-block min-w-[60px]">
-              {displayLevel > item.level_before ? (
-                <>
-                  <span
-                    className="absolute left-0 top-0"
-                    style={{
-                      animation: "slide-up-out 0.6s ease-out forwards",
-                      animationDelay: "1s",
-                    }}
-                  >
-                    Level {item.level_before}
-                  </span>
-                  <span
-                    className="inline-block"
-                    style={{
-                      animation: "slide-up-in 0.6s ease-out forwards",
-                      animationDelay: "1s",
-                      opacity: 0,
-                    }}
-                  >
-                    Level {displayLevel}
-                  </span>
-                </>
-              ) : (
-                <span>Level {displayLevel}</span>
-              )}
-            </span>
-            <span>
-              {item.essence_awarded > 0
-                ? `+${item.essence_awarded} essence`
-                : ""}
-            </span>
-          </div>
-          <div className="relative h-2 bg-slate-200/70 rounded-full overflow-hidden">
-            {(() => {
-              // Calculate progress percentage towards next level
-              const baseEssence =
-                item.rarity === "COMMON"
-                  ? 5
-                  : item.rarity === "RARE"
-                  ? 25
-                  : 200;
-              const requiredForNextLevel = baseEssence * displayLevel;
-              const progressPercent =
-                requiredForNextLevel > 0
-                  ? Math.min((displayEssence / requiredForNextLevel) * 100, 100)
-                  : 0;
-
-              const leveledUp = displayLevel > item.level_before;
-
-              return (
-                <>
-                  {item.essence_awarded > 0 && (
-                    <>
-                      {/* Fill to 100% first if leveled up */}
-                      {leveledUp && (
-                        <div
-                          className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full"
-                          style={
-                            {
-                              animation: "fill-progress 1s ease-out forwards",
-                              "--progress-width": "100%",
-                            } as React.CSSProperties
-                          }
-                        />
-                      )}
-                      {/* Then show new progress after level up, or just show progress if no level up */}
-                      <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full"
-                        style={
-                          leveledUp
-                            ? ({
-                                animation:
-                                  "fill-progress 0.6s ease-out forwards",
-                                animationDelay: "1s",
-                                "--progress-width": `${progressPercent}%`,
-                                opacity: 0,
-                              } as React.CSSProperties)
-                            : ({
-                                animation: "fill-progress 1s ease-out forwards",
-                                "--progress-width": `${progressPercent}%`,
-                              } as React.CSSProperties)
-                        }
-                      />
-                    </>
-                  )}
-                  {item.essence_awarded === 0 && (
-                    <div
-                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </div>
-
-        {onEquip && (
-          <div className="flex flex-wrap gap-2 mt-5">
-            <button
-              className="button-primary text-xs"
-              onClick={() => onEquip(item.mask_id, "TOA")}
-              disabled={equipping === equipLabel(item.mask_id, "TOA")}
-            >
-              {equipping === equipLabel(item.mask_id, "TOA")
-                ? "Equipping..."
-                : "Equip Toa"}
-            </button>
-            <button
-              className="button-secondary text-xs"
-              onClick={() => onEquip(item.mask_id, "TURAGA")}
-              disabled={equipping === equipLabel(item.mask_id, "TURAGA")}
-            >
-              {equipping === equipLabel(item.mask_id, "TURAGA")
-                ? "Equipping..."
-                : "Equip Turaga"}
-            </button>
-          </div>
+        {/* Protodermis Progress Bar */}
+        {alreadySeen && (
+          <ProtodermisProgressBar
+            item={item}
+            displayLevel={displayLevel}
+            displayEssence={displayEssence}
+          />
         )}
+
+        <div className="mt-2">
+          {!alreadySeen && item.essence_awarded > 0 && (
+            <div className="pointer-events-none" aria-hidden>
+              <div
+                className="animate-rise-fade text-xs text-slate-300 opacity-0 text-center"
+                style={{ animationDelay: "1s" }}
+              >
+                +{item.essence_awarded} protodermis
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-start justify-center mt-3">
+          {onEquip && item.is_new ? (
+            <div className="flex justify-center relative">
+              <button
+                className="button-primary text-xs px-6"
+                onClick={() => setShowEquipPopup(!showEquipPopup)}
+                disabled={!!equipping}
+              >
+                Equip Mask
+              </button>
+
+              {/* Equipment Popup */}
+              {showEquipPopup && (
+                <EquipMaskPopup
+                  item={item}
+                  equipping={equipping}
+                  onEquip={(maskId, slot, color, transparent) =>
+                    onEquip?.(maskId, slot, color, transparent)
+                  }
+                  onClose={() => setShowEquipPopup(false)}
+                  currentToaEquipped={currentToaEquipped}
+                  currentTuragaEquipped={currentTuragaEquipped}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="h-[28px]" aria-hidden />
+          )}
+        </div>
       </div>
     </div>
   );

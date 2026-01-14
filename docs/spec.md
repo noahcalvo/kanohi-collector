@@ -23,14 +23,14 @@
 ### 3. Pack opening
 
 - Player taps Open Pack (when available). Pack UI animates, reveals 2 masks sequentially (or simultaneously), each has rarity glow + color variant visuals.
-- After reveal: if a mask is duplicate, show "+X Essence" toast and immediate leveling update if threshold reached.
+- After reveal: if a mask is duplicate, show "+X Protodermis" toast and immediate leveling update if threshold reached.
 - If new mask: adds to collection, shows a big reveal card with rotate/zoom on the 2D hero (possible fake rotation with multiple pre-renders later).
 - Provide "Equip" and "Close" on reveal card.
 
 ### 4. Collection page
 
 - Grid by generation/filter/sort (rarity, owned, new)
-- Mask detail page: stats (rarity, level, essence, buffs), visual (hero), equip button (Toa or Turaga), history of pulls.
+- Mask detail page: stats (rarity, level, protodermis pool, buffs), visual (hero), equip button (Toa or Turaga), history of pulls.
 
 ### 5. Equip
 
@@ -60,7 +60,7 @@ Use relational DB (Postgres) or document store with equivalent fields.
 
 #### `masks` (master catalog — immutable once published for a generation)
 
-- `mask_id` (string, e.g., gen1_matoran_01)
+- `mask_id` (string, e.g., 1)
 - `generation` (int)
 - `name`
 - `base_rarity` (enum: COMMON, RARE, MYTHIC)
@@ -78,7 +78,7 @@ Use relational DB (Postgres) or document store with equivalent fields.
 - `user_id`
 - `mask_id`
 - `owned_count` (int) — how many copies pulled
-- `essence` (int) — accumulated essence (auto from duplicates)
+- `essence` (int) — accumulated protodermis (auto from duplicates)
 - `level` (int)
 - `equipped_slot` (enum: NONE, TOA, TURAGA)
 - `unlocked_colors` (array) — list of color variants unlocked for this mask
@@ -183,9 +183,9 @@ Ensure probabilities remain in [0,1] and do clamping with a cap (e.g., cannot re
 
 *(Engineer note: exact math can vary; keep it normalized and deterministic server-side.)*
 
-## Duplicate → Essence → Leveling (rules & formulas)
+## Duplicate → Protodermis → Leveling (rules & formulas)
 
-### Essence from pulls
+### Protodermis from pulls
 
 When a mask is pulled and user already owns at least one copy:
 
@@ -193,16 +193,16 @@ When a mask is pulled and user already owns at least one copy:
 essence_awarded = duplicate_value_by_rarity
 ```
 
-- COMMON duplicate: 1 essence
-- RARE duplicate: 5 essence
-- MYTHIC duplicate: 50 essence
+- COMMON duplicate: 1 protodermis
+- RARE duplicate: 5 protodermis
+- MYTHIC duplicate: 50 protodermis
 
-Add `essence_awarded` to `user_masks.essence`.
+Add `essence_awarded` to `user_masks.essence` (protodermis pool).
 
 ### Level Up formula
 
 ```
-RequiredEssenceToLevelUp(current_level, rarity) = base_by_rarity * current_level
+RequiredProtodermisToLevelUp(current_level, rarity) = base_by_rarity * current_level
 ```
 
 **base_by_rarity:**
@@ -211,13 +211,13 @@ RequiredEssenceToLevelUp(current_level, rarity) = base_by_rarity * current_level
 - MYTHIC = 200
 
 **Examples:**
-- COMMON Level 1→2: 5 × 1 = **5 essence**
-- COMMON Level 2→3: 5 × 2 = **10 essence**
-- COMMON Level 3→4: 5 × 3 = **15 essence**
-- RARE Level 1→2: 25 × 1 = **25 essence** (5 duplicate pulls)
-- MYTHIC Level 1→2: 200 × 1 = **200 essence** (4 duplicate pulls)
+- COMMON Level 1→2: 5 × 1 = 5 protodermis
+- COMMON Level 2→3: 5 × 2 = 10 protodermis
+- COMMON Level 3→4: 5 × 3 = 15 protodermis
+- RARE Level 1→2: 25 × 1 = 25 protodermis (≈5 duplicates)
+- MYTHIC Level 1→2: 200 × 1 = 200 protodermis (≈4 duplicates)
 
-Implementation: Store current_level and check if essence >= base * current_level, then deduct and increment level. Repeat until not enough essence or max_level reached.
+Implementation: Store current_level and check if protodermis (essence field) >= base * current_level, then deduct and increment level. Repeat until not enough protodermis or max_level reached.
 
 ### max_level
 
@@ -227,7 +227,7 @@ Implementation: Store current_level and check if essence >= base * current_level
 
 ### On level up
 
-- Deduct the required essence (or keep cumulative semantics — choose one). MVP: consume essence when leveling (reduces runaway).
+- Deduct the required protodermis (or keep cumulative semantics — choose one). MVP: consume protodermis when leveling (reduces runaway).
 - Recompute `user_masks.level` and persist.
 
 ### Buff scaling by level
@@ -423,7 +423,7 @@ Release web MVP, gather metrics.
     "pack_id": "free_daily_v1",
     "masks": [
         {
-            "mask_id": "gen1_toa_03",
+            "mask_id": "1",
             "name": "Toa Mask 3",
             "rarity": "RARE",
             "color": "standard",
@@ -433,7 +433,7 @@ Release web MVP, gather metrics.
             "level_after": 0
         },
         {
-            "mask_id": "gen1_matoran_01",
+            "mask_id": "1",
             "name": "Matoran Mask 1",
             "rarity": "COMMON",
             "color": "alt_blue",

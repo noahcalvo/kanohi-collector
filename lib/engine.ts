@@ -70,18 +70,100 @@ function sampleRarityForceRarePlus(bonus: number, rand: () => number): Rarity {
   return weightedSample(["MYTHIC", "RARE"], weights, rand);
 }
 
-function sampleColor(def: Mask, rand: () => number): string {
-  const colors = Object.keys(def.base_color_distribution);
-  const weights = colors.map((c) => def.base_color_distribution[c]);
+const COLOR_PALETTES_BY_SET_AND_RARITY: Record<
+  string,
+  Record<Rarity, string[]>
+> = {
+  "1": {
+    COMMON: [
+      "standard",
+      "orange",
+      "perriwinkle",
+      "lime",
+      "tan",
+      "light gray",
+      "dark gray",
+    ],
+    RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+    MYTHIC: ["standard"],
+  },
+};
+
+const DEFAULT_COLORS_BY_RARITY: Record<Rarity, string[]> = {
+  COMMON: [
+    "standard",
+    "orange",
+    "perriwinkle",
+    "lime",
+    "tan",
+    "light gray",
+    "dark gray",
+  ],
+  RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+  MYTHIC: ["standard"],
+};
+
+// available colors depend on rarity and set id
+export function getAvailableColors(rarity: Rarity, setId: number): string[] {
+  if (rarity === "MYTHIC") return ["standard"];
+
+  const setPalette = COLOR_PALETTES_BY_SET_AND_RARITY[setId]?.[rarity];
+
+  if (setPalette?.length) return setPalette;
+  return DEFAULT_COLORS_BY_RARITY[rarity];
+}
+
+function sampleColor(
+  def: Mask,
+  unlockedColors: string[],
+  rand: () => number
+): string {
+  // Get available colors based on rarity
+  const allNonStandardColors = getAvailableColors(
+    def.base_rarity,
+    def.generation
+  ).filter((c) => c !== "standard");
+  const remainingColors = allNonStandardColors.filter(
+    (c) => !unlockedColors.includes(c)
+  );
+
+  if (remainingColors.length === 0) {
+    return "standard";
+  }
+
+  // Build weights for the unlock mechanic:
+  // - Original color gets 20%
+  // - Remaining colors split the other 20%
+  // - Standard gets 60%
+  const colorWeights: Record<string, number> = {};
+  const numRemaining = remainingColors.length;
+  const otherColorProb = 0.2 / numRemaining;
+
+  colorWeights["standard"] = 0.6;
+  for (const color of remainingColors) {
+    colorWeights[color] = color === def.original_color ? 0.2 : otherColorProb;
+  }
+
+  const colors = Object.keys(colorWeights);
+  const weights = colors.map((c) => colorWeights[c]);
   return weightedSample(colors, weights, rand);
 }
 
-function sampleMaskByRarity(userId: string, rarity: Rarity, rand: () => number, exclude: Set<string>): Mask {
-  const candidates = db.masks.filter((m) => m.base_rarity === rarity && !exclude.has(m.mask_id));
+function sampleMaskByRarity(
+  userId: string,
+  rarity: Rarity,
+  rand: () => number,
+  exclude: Set<string>
+): Mask {
+  const candidates = db.masks.filter(
+    (m) => m.base_rarity === rarity && !exclude.has(m.mask_id)
+  );
   if (candidates.length === 0) {
     throw new Error("No masks available for rarity");
   }
-  const weights = candidates.map((m) => (getUserMask(userId, m.mask_id) ? 0.2 : 1));
+  const weights = candidates.map((m) =>
+    getUserMask(userId, m.mask_id) ? 0.2 : 1
+  );
   return weightedSample(candidates, weights, rand);
 }
 
@@ -97,6 +179,7 @@ function ensureUserMask(userId: string, maskId: string): UserMask {
     level: 1,
     equipped_slot: "NONE",
     unlocked_colors: [],
+    equipped_color: "standard",
     last_acquired_at: new Date(),
   };
 }
@@ -112,12 +195,24 @@ function applyLeveling(mask: UserMask, rarity: Rarity): UserMask {
     if (mask.essence < cost) break;
     mask.essence -= cost;
     mask.level += 1;
-    appendEvent({ event_id: randomUUID(), type: "level_up", user_id: mask.user_id, payload: { mask_id: mask.mask_id, level: mask.level }, timestamp: new Date() });
+    appendEvent({
+      event_id: randomUUID(),
+      type: "level_up",
+      user_id: mask.user_id,
+      payload: { mask_id: mask.mask_id, level: mask.level },
+      timestamp: new Date(),
+    });
   }
   return mask;
 }
 
-function discoveryReroll(userId: string, rarity: Rarity, rand: () => number, discoveryBonus: number, currentMask: Mask): Mask {
+function discoveryReroll(
+  userId: string,
+  rarity: Rarity,
+  rand: () => number,
+  discoveryBonus: number,
+  currentMask: Mask
+): Mask {
   if (!discoveryBonus) return currentMask;
   let selected = currentMask;
   for (let i = 0; i < DISCOVERY_ATTEMPTS_LIMIT; i += 1) {
@@ -134,7 +229,11 @@ function discoveryReroll(userId: string, rarity: Rarity, rand: () => number, dis
   return selected;
 }
 
-export function openPack(userId: string, packId: string, opts?: { seed?: string }): OpenResult {
+export function openPack(
+  userId: string,
+  packId: string,
+  opts?: { seed?: string }
+): OpenResult {
   const user = getUser(userId);
   if (!user) throw new Error("User not found");
   const pack = getPack(packId);
@@ -157,14 +256,17 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
   let sawRarePlus = false;
 
   for (let i = 0; i < pack.masks_per_pack; i += 1) {
-    const rarity = pityFlag && i === 0 ? sampleRarityForceRarePlus(buffs.pack_luck, rand) : sampleRarityWithPackLuck(buffs.pack_luck, rand);
+    const rarity =
+      pityFlag && i === 0
+        ? sampleRarityForceRarePlus(buffs.pack_luck, rand)
+        : sampleRarityWithPackLuck(buffs.pack_luck, rand);
     if (rarity !== "COMMON") sawRarePlus = true;
     const exclude = new Set<string>();
     let mask = sampleMaskByRarity(userId, rarity, rand, exclude);
     mask = discoveryReroll(userId, rarity, rand, buffs.discovery, mask);
-    const color = sampleColor(mask, rand);
 
     let userMask = ensureUserMask(userId, mask.mask_id);
+    const color = sampleColor(mask, userMask.unlocked_colors, rand);
     const isNew = userMask.owned_count === 0;
     const rarityKey = mask.base_rarity;
     let essenceAwarded = 0;
@@ -176,7 +278,12 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
 
     const levelBefore = userMask.level;
     userMask.owned_count += 1;
-    userMask.unlocked_colors = addColor(userMask.unlocked_colors, color);
+    // Only add color if it's not already unlocked
+    const wasColorNew =
+      color != "standard" && !userMask.unlocked_colors.includes(color);
+    if (wasColorNew) {
+      userMask.unlocked_colors = addColor(userMask.unlocked_colors, color);
+    }
     userMask.last_acquired_at = new Date();
     userMask = applyLeveling(userMask, rarityKey);
     upsertUserMask(userMask);
@@ -185,7 +292,13 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
       event_id: randomUUID(),
       user_id: userId,
       type: "mask_pull",
-      payload: { mask_id: mask.mask_id, rarity, color, is_new: isNew },
+      payload: {
+        mask_id: mask.mask_id,
+        rarity,
+        color,
+        is_new: isNew,
+        was_color_new: wasColorNew,
+      },
       timestamp: new Date(),
     });
 
@@ -195,6 +308,7 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
       rarity,
       color,
       is_new: isNew,
+      was_color_new: wasColorNew,
       essence_awarded: essenceAwarded,
       essence_remaining: userMask.essence,
       final_essence_remaining: userMask.essence,
@@ -202,13 +316,17 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
       level_after: userMask.level,
       final_level_after: userMask.level,
       unlocked_colors: userMask.unlocked_colors,
+      transparent: mask.transparent,
     });
 
     if (pityFlag) pityFlag = false;
   }
 
   // Update all duplicate mask_ids in results to show final essence_remaining and level_after
-  const maskStates = new Map<string, { essence_remaining: number; level_after: number }>();
+  const maskStates = new Map<
+    string,
+    { essence_remaining: number; level_after: number }
+  >();
   for (const result of results) {
     const currentUserMask = getUserMask(userId, result.mask_id);
     if (currentUserMask) {
@@ -227,10 +345,21 @@ export function openPack(userId: string, packId: string, opts?: { seed?: string 
   }
 
   const nextPity = sawRarePlus ? 0 : refreshed.pity_counter + 1;
-  const updatedProgress = { ...refreshed, fractional_units: refreshed.fractional_units - PACK_UNITS_PER_PACK, pity_counter: nextPity, last_pack_claim_ts: new Date() };
+  const updatedProgress = {
+    ...refreshed,
+    fractional_units: refreshed.fractional_units - PACK_UNITS_PER_PACK,
+    pity_counter: nextPity,
+    last_pack_claim_ts: new Date(),
+  };
   updateUserPackProgress(updatedProgress);
 
-  appendEvent({ event_id: randomUUID(), user_id: userId, type: "pack_open", payload: { pack_id: pack.pack_id, results }, timestamp: new Date() });
+  appendEvent({
+    event_id: randomUUID(),
+    user_id: userId,
+    type: "pack_open",
+    payload: { pack_id: pack.pack_id, results },
+    timestamp: new Date(),
+  });
 
   return { masks: results, pity_counter: nextPity };
 }
@@ -251,14 +380,23 @@ export function packStatus(userId: string, packId: string) {
     };
   }
 
-  const timeSince = Math.floor((Date.now() - refreshed.last_unit_ts.getTime()) / 1000);
+  const timeSince = Math.floor(
+    (Date.now() - refreshed.last_unit_ts.getTime()) / 1000
+  );
   const speedMultiplier = 1 + buffs.timer_speed;
   const unitsGained = (timeSince * speedMultiplier) / PACK_UNIT_SECONDS;
-  const unitsNeeded = Math.max(PACK_UNITS_PER_PACK - refreshed.fractional_units, 0);
-  const timeToReady = Math.max(Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier), 0);
+  const unitsNeeded = Math.max(
+    PACK_UNITS_PER_PACK - refreshed.fractional_units,
+    0
+  );
+  const timeToReady = Math.max(
+    Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
+    0
+  );
   return {
     pack_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK,
-    time_to_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK ? 0 : timeToReady,
+    time_to_ready:
+      refreshed.fractional_units >= PACK_UNITS_PER_PACK ? 0 : timeToReady,
     fractional_units: refreshed.fractional_units,
     pity_counter: refreshed.pity_counter,
   };
@@ -274,19 +412,27 @@ export function mePayload(userId: string) {
   const userMasks = getUserMasks(userId);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const unlockedColors: Record<string, string[]> = {};
-  userMasks.forEach((m) => { unlockedColors[m.mask_id] = m.unlocked_colors; });
+  userMasks.forEach((m) => {
+    unlockedColors[m.mask_id] = m.unlocked_colors;
+  });
 
   const collection: CollectionMask[] = userMasks.map((um) => {
     const def = db.masks.find((m) => m.mask_id === um.mask_id);
     return {
       mask_id: um.mask_id,
       name: def?.name ?? um.mask_id,
+      generation: def?.generation ?? 1,
       rarity: def?.base_rarity ?? "COMMON",
       level: um.level,
       essence: um.essence,
       owned_count: um.owned_count,
       equipped_slot: um.equipped_slot,
       unlocked_colors: um.unlocked_colors,
+      equipped_color: um.equipped_color,
+      transparent: def?.transparent,
+      buff_type: def?.buff_type ?? "VISUAL",
+      description: def?.description ?? "",
+      origin: def?.origin ?? "",
     };
   });
 
@@ -319,6 +465,36 @@ export function equipMask(userId: string, maskId: string, slot: EquipSlot) {
 
   target.equipped_slot = slot;
   upsertUserMask(target);
-  appendEvent({ event_id: randomUUID(), user_id: userId, type: "equip", payload: { mask_id: maskId, slot }, timestamp: new Date() });
+  appendEvent({
+    event_id: randomUUID(),
+    user_id: userId,
+    type: "equip",
+    payload: { mask_id: maskId, slot },
+    timestamp: new Date(),
+  });
   return target;
 }
+
+export function setMaskColor(userId: string, maskId: string, color: string) {
+  const user = getUser(userId);
+  if (!user) throw new Error("User not found");
+  const target = getUserMask(userId, maskId);
+  if (!target) throw new Error("User does not own mask");
+
+  // Verify the color is unlocked
+  if (!target.unlocked_colors.includes(color) && color !== "standard") {
+    throw new Error("Color not unlocked");
+  }
+
+  target.equipped_color = color;
+  upsertUserMask(target);
+  appendEvent({
+    event_id: randomUUID(),
+    user_id: userId,
+    type: "color_change",
+    payload: { mask_id: maskId, color },
+    timestamp: new Date(),
+  });
+  return target;
+}
+

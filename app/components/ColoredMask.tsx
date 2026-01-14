@@ -1,56 +1,42 @@
+import Image from "next/image";
 import React from "react";
+import { colorToHex } from "../../lib/colors";
 
 interface ColoredMaskProps {
   maskId: string;
   color?: string;
   className?: string;
   alt?: string;
+  transparent?: boolean;
+  withShading?: boolean;
+  style?: React.CSSProperties;
 }
 
-/**
- * Maps color names to hex codes
- */
-function colorToHex(color: string): string {
-  const colorMap: Record<string, string> = {
-    standard: "#808080",
-    red: "#EF4444",
-    blue: "#3B82F6",
-    green: "#10B981",
-    yellow: "#F59E0B",
-    purple: "#A855F7",
-    orange: "#F97316",
-    black: "#1F2937",
-    white: "#F3F4F6",
-    gold: "#EAB308",
-    alt_blue: "#3B82F6",
-    alt_green: "#10B981",
-    alt_black: "#1F2937",
-  };
-  
-  // If already a hex code, return as is
-  if (color.startsWith("#")) return color;
-  
-  // Otherwise look up the color name
-  return colorMap[color.toLowerCase()] || colorMap.standard;
-}
+// Color utilities centralized in lib/colors
 
 /**
  * Renders a mask image with runtime color recoloring using multiply blend mode + CSS mask.
- * Requires mask images to have 100% opacity (not semi-transparent).
+ * For opaque masks (100% opacity), uses CSS mask technique.
+ * For transparent masks (80% opacity), overlays the colored image directly.
  */
-export function ColoredMask({ 
-  maskId, 
+export function ColoredMask({
+  maskId,
   color = "standard", // Default grey
   className = "",
-  alt = "Mask"
+  alt = "Mask",
+  transparent = false,
+  withShading = false,
+  style = {},
 }: ColoredMaskProps) {
   const imagePath = `/masks/${maskId}.png`;
   const hexColor = colorToHex(color);
+  const isTransparent = transparent;
 
+  // Mask rendering with proper coloring and lighting
   return (
-    <div 
+    <div
       className={`relative ${className}`}
-      style={{ 
+      style={{
         isolation: "isolate",
         WebkitMaskImage: `url(${imagePath})`,
         WebkitMaskSize: "contain",
@@ -60,26 +46,55 @@ export function ColoredMask({
         maskSize: "contain",
         maskRepeat: "no-repeat",
         maskPosition: "center",
+        opacity: isTransparent ? 0.8 : 1,
+        ...style,
       }}
     >
       {/* White background layer */}
       <div className="absolute inset-0 bg-white" />
-      
+
       {/* Grayscale mask image */}
-      <img
+      <Image
         src={imagePath}
         alt={alt}
+        fill
         className="absolute inset-0 w-full h-full object-contain"
       />
-      
+
       {/* Color multiply layer */}
-      <div 
+      <div
         className="absolute inset-0"
-        style={{ 
+        style={{
           backgroundColor: hexColor,
-          mixBlendMode: "multiply"
+          mixBlendMode: "multiply",
         }}
       />
+
+      {withShading && (
+        <>
+          {/* Highlight layer - top-left highlight */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 60%)",
+              mixBlendMode: "soft-light",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Shadow layer - bottom-right shadow */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at 70% 70%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.5) 100%)",
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }

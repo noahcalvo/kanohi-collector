@@ -36,7 +36,7 @@ Indexes: idx_users_username, idx_users_last_active_at
 
 ### masks (master catalog — immutable once published)
 
-* mask_id TEXT PK (e.g., `gen1_toa_03`)
+* mask_id TEXT PK (e.g., `1`)
 * generation INT
 * name TEXT
 * base_rarity ENUM('COMMON','RARE','MYTHIC')
@@ -57,7 +57,7 @@ Indexes: pk on mask_id; idx_generation
 * user_id UUID FK -> users(id)
 * mask_id TEXT FK -> masks(mask_id)
 * owned_count INT DEFAULT 0
-* essence INT DEFAULT 0
+* essence INT DEFAULT 0 (protodermis pool)
 * level INT DEFAULT 0
 * equipped_slot ENUM('NONE','TOA','TURAGA') DEFAULT 'NONE'
 * unlocked_colors TEXT[] DEFAULT '{}'
@@ -137,7 +137,7 @@ Server behavior:
 * Run draw engine (detailed below) to generate N masks (2).
 * Persist updates in same transaction:
 
-  * Create/UPDATE user_masks (increment owned_count, update essence, level changes, add color to unlocked_colors array if not present).
+  * Create/UPDATE user_masks (increment owned_count, update essence/protodermis, level changes, add color to unlocked_colors array if not present).
   * Update user_pack_progress.pity_counter and fractional_units/last_pack_claim_ts.
   * Insert events rows (pack_open, mask_pull, level_up).
 * Return a rich response with mask objects including fields: `mask_id, name, rarity, color, is_new, essence_awarded, level_before, level_after, unlocked_colors`.
@@ -238,11 +238,11 @@ determinism & randomness:
 
 ---
 
-# Leveling & Essence — exact implementation rules (MVP)
+# Leveling & Protodermis — exact implementation rules (MVP)
 
-* Duplicate essence awards: COMMON=1, RARE=5, MYTHIC=50.
-* base_by_rarity for level cost: COMMON=5, RARE=25, MYTHIC=200.
-* Level up rule (MVP chosen): consume essence when leveling. Implementation:
+* Duplicate protodermis awards: COMMON=1, RARE=5, MYTHIC=50.
+* base_by_rarity for level cost: COMMON=5, RARE=25, MYTHIC=200 protodermis.
+* Level up rule (MVP chosen): consume protodermis when leveling. Implementation:
 
   ```
   while user_mask.essence >= cost_for_next_level:
@@ -255,11 +255,11 @@ determinism & randomness:
       break
   ```
   
-  **Formula:** To level from L to L+1 requires `base_by_rarity * L` essence.
+  **Formula:** To level from L to L+1 requires `base_by_rarity * L` protodermis.
   - Level 1→2: COMMON needs 5×1=5, RARE needs 25×1=25, MYTHIC needs 200×1=200
   - Level 2→3: COMMON needs 5×2=10, RARE needs 25×2=50, MYTHIC needs 200×2=400
   - Level 3→4: COMMON needs 5×3=15, RARE needs 25×3=75, MYTHIC needs 200×3=600
-* Persist `level` and `essence`; write an event for each `level_up`.
+* Persist `level` and `essence` (protodermis pool); write an event for each `level_up`.
 
 Buff value compute:
 
@@ -312,7 +312,7 @@ Unit & integration tests prioritized:
 1. Draw engine unit tests: verify rarity distribution math for many samples (stat checks), pity enforcement after 20 packs.
 2. Buff math tests: additive pack_luck sums, clamp to cap.
 3. Discovery reroll tests: ensure reroll probability respected and attempts limit enforced.
-4. Leveling tests: essence accumulation and consumption semantics; edge cases on max_level.
+4. Leveling tests: protodermis accumulation and consumption semantics; edge cases on max_level.
 5. Concurrency test: simulate N concurrent open requests for the same user — ensure single success and idempotent behavior.
 6. End-to-end: simulate 20 packs to verify at least one rare+ appears.
 
@@ -344,7 +344,7 @@ Instrumentation:
 
 These are left intentionally flagged. Default choices suggested in spec:
 
-1. Essence consumption semantics — choose consume-on-level (we implemented that). 
+1. Protodermis consumption semantics — choose consume-on-level (we implemented that). 
 2. Within-pack uniqueness — allow duplicates (MVP). 
 3. Pity threshold — 20 packs (configurable). 
 4. Buff stacking math — additive with caps (implemented). 

@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { openPack, equipMask } from "../lib/engine";
-import { getUserMask, getUserPackProgress, resetStore, upsertUserMask } from "../lib/store";
 import { PACK_UNITS_PER_PACK } from "../lib/constants";
+import { openPack, equipMask } from "../lib/engine";
+import {
+  getUserMask,
+  getUserPackProgress,
+  resetStore,
+  upsertUserMask,
+} from "../lib/store";
 
 const USER_ID = "user-1";
 const PACK_ID = "free_daily_v1";
@@ -26,7 +31,7 @@ describe("engine", () => {
     if (!progress) throw new Error("missing progress");
     progress.pity_counter = 20;
     progress.fractional_units = PACK_UNITS_PER_PACK;
-    const result = openPack(USER_ID, PACK_ID, { seed: "pity-seed" });
+    const result = openPack(USER_ID, PACK_ID, { seed: "seed-1" });
     const hasRarePlus = result.masks.some((m) => m.rarity !== "COMMON");
     expect(hasRarePlus).toBe(true);
   });
@@ -36,19 +41,20 @@ describe("engine", () => {
     upsertUserMask({
       id: "temp-mask",
       user_id: USER_ID,
-      mask_id: "gen1_toa_01",
+      mask_id: "1",
       owned_count: 1,
       essence: 0,
       level: 1,
       equipped_slot: "NONE",
+      equipped_color: "standard",
       unlocked_colors: ["standard"],
       last_acquired_at: new Date(),
     });
 
-    equipMask(USER_ID, "gen1_toa_02", "TOA");
-    equipMask(USER_ID, "gen1_toa_01", "TOA");
-    const maskA = getUserMask(USER_ID, "gen1_toa_02");
-    const maskB = getUserMask(USER_ID, "gen1_toa_01");
+    equipMask(USER_ID, "2", "TOA");
+    equipMask(USER_ID, "1", "TOA");
+    const maskA = getUserMask(USER_ID, "2");
+    const maskB = getUserMask(USER_ID, "1");
     expect(maskA?.equipped_slot).toBe("NONE");
     expect(maskB?.equipped_slot).toBe("TOA");
   });

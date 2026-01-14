@@ -20,6 +20,9 @@ const config: Config = {
       animation: {
         "chest-shake": "chest-shake 650ms ease-in-out 2",
       },
+      fontFamily: {
+        "voya-nui": ["var(--font-voya-nui)"],
+      },
     },
   },
   plugins: [],

@@ -16,9 +16,28 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
   const equipLabel = useCallback((maskId: string, slot: EquipSlot) => `${maskId}-${slot}` as const, []);
 
   const equip = useCallback(
-    async (maskId: string, slot: EquipSlot) => {
+    async (
+      maskId: string,
+      slot: EquipSlot,
+      color?: string,
+      transparent?: boolean
+    ) => {
       setEquipping(equipLabel(maskId, slot));
       setEquipError(null);
+
+      // If a color is provided, set it first
+      if (color) {
+        const colorRes = await fetch(`/api/mask/${maskId}/color`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ color }),
+        });
+        if (!colorRes.ok) {
+          setEquipError("Color change failed");
+          setEquipping(null);
+          return;
+        }
+      }
 
       const res = await fetch(`/api/mask/${maskId}/equip`, {
         method: "POST",
@@ -33,7 +52,7 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
       await refreshMe();
       setEquipping(null);
     },
-    [equipLabel, refreshMe],
+    [equipLabel, refreshMe]
   );
 
   return { equip, equipping, equipError, clearEquipError };

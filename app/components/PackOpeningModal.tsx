@@ -1,24 +1,81 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { colorToHex } from "../../lib/colors";
 import type { DrawResultItem, EquipSlot, OpenResult } from "../../lib/types";
 import { PackRevealCard } from "./PackRevealCard";
 
-export type PackOverlayStage = "idle" | "shaking" | "waiting" | "revealing_first" | "revealing_second" | "revealing_both" | "done" | "error";
+export type PackOverlayStage =
+  | "idle"
+  | "shaking"
+  | "waiting"
+  | "revealing_first"
+  | "revealing_second"
+  | "revealing_both"
+  | "done"
+  | "error";
 
 export function PackOpeningModal(props: {
   open: boolean;
   stage: PackOverlayStage;
   results: OpenResult | null;
   revealedCount: number;
-  toasts: Array<{ id: string; message: string }>;
-  onEquip?: (maskId: string, slot: EquipSlot) => void;
+  onEquip?: (
+    maskId: string,
+    slot: EquipSlot,
+    color?: string,
+    transparent?: boolean
+  ) => void;
   equipping?: string | null;
   onClose: () => void;
   onAdvance?: () => void;
+  currentToaEquipped?: {
+    maskId: string;
+    name: string;
+    color?: string;
+    transparent?: boolean;
+  } | null;
+  currentTuragaEquipped?: {
+    maskId: string;
+    name: string;
+    color?: string;
+    transparent?: boolean;
+  } | null;
 }) {
-  const { open, stage, results, revealedCount, toasts, onEquip, equipping, onClose, onAdvance } = props;
+  const {
+    open,
+    stage,
+    results,
+    onEquip,
+    equipping,
+    onClose,
+    onAdvance,
+    currentToaEquipped,
+    currentTuragaEquipped,
+  } = props;
+
+  useEffect(() => {
+    if (!open) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== " " && e.key !== "Spacebar") return;
+      e.preventDefault();
+
+      // If we can advance, do that
+      if (stage === "revealing_first" || stage === "revealing_second") {
+        onAdvance?.();
+      }
+      // If we're done or in error state, close
+      else if (stage === "done" || stage === "error") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, stage, onAdvance, onClose]);
 
   if (!open) return null;
 
@@ -30,9 +87,11 @@ export function PackOpeningModal(props: {
   const firstMask = results?.masks?.[0] ?? null;
   const secondMask = results?.masks?.[1] ?? null;
 
+  // Color utilities centralized in lib/colors
+
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/35 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Pack opening"
@@ -41,52 +100,85 @@ export function PackOpeningModal(props: {
       }}
     >
       <div
-        className="card w-full max-w-xl relative"
+        className="w-full max-w-xl relative"
         onMouseDown={(e) => {
           e.stopPropagation();
         }}
       >
-        {toasts.length > 0 && (
-          <div className="absolute right-6 top-6 z-[210] flex flex-col gap-2 items-end pointer-events-none">
-            {toasts.map((t) => (
-              <div
-                key={t.id}
-                className="px-3 py-2 rounded-2xl bg-white/90 border border-slate-200/70 shadow-sm backdrop-blur-sm text-sm text-slate-900"
-              >
-                {t.message}
-              </div>
-            ))}
+        {showBoth && (
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide"></div>
+            </div>
+            <button
+              className="button-secondary text-xs"
+              onClick={onClose}
+              disabled={!canClose}
+            >
+              Close
+            </button>
           </div>
         )}
-
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Free Pack</div>
-          </div>
-          <button className="button-secondary text-xs" onClick={onClose} disabled={!canClose}>
-            Close
-          </button>
-        </div>
 
         <div className="mt-6 flex flex-col items-center">
           {!showFirstOnly && !showSecondOnly && !showBoth && (
             <>
-              <div
-                className={
-                  "text-slate-800 transition-all duration-500 ease-out " +
-                  (stage === "shaking" ? "animate-chest-shake motion-reduce:animate-none" : "")
-                }
-              >
-                <Image src="/chest.svg" alt="Chest" width={140} height={140} priority />
-              </div>
-
-              {stage !== "error" && (stage === "shaking" || stage === "waiting") && (
-                <div className="mt-4 text-sm text-slate-600">Hold on…</div>
+              {stage === "waiting" ? (
+                <div className="relative h-[280px] w-[140px] flex flex-col items-center justify-center">
+                  <div
+                    className="absolute top-0 animate-pack-top-separate"
+                    style={{ transformOrigin: "center bottom" }}
+                  >
+                    <Image
+                      src="/pack/pack-top.png"
+                      alt="Pack top"
+                      width={140}
+                      height={140}
+                      priority
+                    />
+                  </div>
+                  <div
+                    className="absolute top-[140px] animate-pack-bottom-stay"
+                    style={{ transformOrigin: "center top" }}
+                  >
+                    <Image
+                      src="/pack/pack-bottom.png"
+                      alt="Pack bottom"
+                      width={140}
+                      height={140}
+                      priority
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={
+                    "text-slate-200 transition-all duration-500 ease-out " +
+                    (stage === "shaking"
+                      ? "animate-chest-shake motion-reduce:animate-none"
+                      : "")
+                  }
+                >
+                  <Image
+                    src="/pack/pack.png"
+                    alt="Pack"
+                    width={140}
+                    height={140}
+                    priority
+                  />
+                </div>
               )}
+
+              {stage !== "error" &&
+                (stage === "shaking" || stage === "waiting") && (
+                  <div className="mt-4 text-sm text-slate-300">Hold on…</div>
+                )}
             </>
           )}
 
-          {stage === "error" && <div className="mt-6 text-sm text-rose-700">Pack open failed</div>}
+          {stage === "error" && (
+            <div className="mt-6 text-sm text-rose-700">Pack open failed</div>
+          )}
 
           {showFirstOnly && firstMask && (
             <div className="w-full max-w-md mx-auto space-y-4">
@@ -98,20 +190,54 @@ export function PackOpeningModal(props: {
                         <div
                           key={i}
                           className="particle"
-                          style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            background: ['#fbbf24', '#f59e0b', '#f97316', '#a78bfa', '#8b5cf6'][Math.floor(Math.random() * 5)],
-                            animationDelay: `${Math.random() * 0.3}s`,
-                            animationDuration: `${1.2 + Math.random() * 0.6}s`,
-                            '--drift': `${(Math.random() - 0.5) * 60}px`
-                          } as React.CSSProperties}
+                          style={
+                            {
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                              background: [
+                                "#fbbf24",
+                                "#f59e0b",
+                                "#f97316",
+                                "#a78bfa",
+                                "#8b5cf6",
+                              ][Math.floor(Math.random() * 5)],
+                              animationDelay: `${Math.random() * 0.3}s`,
+                              animationDuration: `${
+                                1.2 + Math.random() * 0.6
+                              }s`,
+                              "--drift": `${(Math.random() - 0.5) * 60}px`,
+                            } as React.CSSProperties
+                          }
                         />
                       ))}
                     </div>
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                      <div className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold shadow-lg animate-pop-in">
-                        ✨ New mask added to your collection
+                  </>
+                )}
+                {firstMask.was_color_new && firstMask.color !== "standard" && (
+                  <>
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                      {[...Array(16)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="particle"
+                          style={
+                            {
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                              background: colorToHex(firstMask.color),
+                              animationDelay: `${Math.random() * 0.2}s`,
+                              animationDuration: `${
+                                1.2 + Math.random() * 0.6
+                              }s`,
+                              "--drift": `${(Math.random() - 0.5) * 60}px`,
+                            } as React.CSSProperties
+                          }
+                        />
+                      ))}
+                    </div>
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <div className="px-4 py-1.5 rounded-full bg-white/90 border border-sky-200/60 text-sky-700 text-sm font-semibold shadow-sm animate-pop-expand-fade">
+                        Color unlocked
                       </div>
                     </div>
                   </>
@@ -121,12 +247,17 @@ export function PackOpeningModal(props: {
                     item={firstMask}
                     emphasis="focused"
                     visible={true}
-                    showFlare={firstMask.is_new}
+                    alreadySeen={false}
+                    currentToaEquipped={currentToaEquipped}
+                    currentTuragaEquipped={currentTuragaEquipped}
                   />
                 </div>
               </div>
               <div className="flex justify-center">
-                <button className="button-primary" onClick={onAdvance}>
+                <button
+                  className="text-slate-300 font-bold animate-pulse"
+                  onClick={onAdvance}
+                >
                   Continue
                 </button>
               </div>
@@ -143,35 +274,75 @@ export function PackOpeningModal(props: {
                         <div
                           key={i}
                           className="particle"
-                          style={{
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            background: ['#fbbf24', '#f59e0b', '#f97316', '#a78bfa', '#8b5cf6'][Math.floor(Math.random() * 5)],
-                            animationDelay: `${Math.random() * 0.3}s`,
-                            animationDuration: `${1.2 + Math.random() * 0.6}s`,
-                            '--drift': `${(Math.random() - 0.5) * 60}px`
-                          } as React.CSSProperties}
+                          style={
+                            {
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                              background: [
+                                "#fbbf24",
+                                "#f59e0b",
+                                "#f97316",
+                                "#a78bfa",
+                                "#8b5cf6",
+                              ][Math.floor(Math.random() * 5)],
+                              animationDelay: `${Math.random() * 0.3}s`,
+                              animationDuration: `${
+                                1.2 + Math.random() * 0.6
+                              }s`,
+                              "--drift": `${(Math.random() - 0.5) * 60}px`,
+                            } as React.CSSProperties
+                          }
                         />
                       ))}
                     </div>
-                    <div className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                      <div className="px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold shadow-lg animate-pop-in">
-                        ✨ New mask added to your collection
-                      </div>
-                    </div>
                   </>
                 )}
+                {secondMask.was_color_new &&
+                  secondMask.color !== "standard" && (
+                    <>
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                        {[...Array(16)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="particle"
+                            style={
+                              {
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 100}%`,
+                                background: colorToHex(secondMask.color),
+                                animationDelay: `${Math.random() * 0.2}s`,
+                                animationDuration: `${
+                                  1.2 + Math.random() * 0.6
+                                }s`,
+                                "--drift": `${(Math.random() - 0.5) * 60}px`,
+                              } as React.CSSProperties
+                            }
+                          />
+                        ))}
+                      </div>
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                        <div className="px-4 py-1.5 rounded-full bg-white/90 border border-sky-200/60 text-sky-700 text-sm font-semibold shadow-sm animate-pop-expand-fade">
+                          Color unlocked
+                        </div>
+                      </div>
+                    </>
+                  )}
                 <div className="animate-pop-in">
                   <PackRevealCard
                     item={secondMask}
                     emphasis="focused"
                     visible={true}
-                    showFlare={secondMask.is_new}
+                    alreadySeen={false}
+                    currentToaEquipped={currentToaEquipped}
+                    currentTuragaEquipped={currentTuragaEquipped}
                   />
                 </div>
               </div>
               <div className="flex justify-center">
-                <button className="button-primary" onClick={onAdvance}>
+                <button
+                  className="text-slate-300 font-bold animate-pulse"
+                  onClick={onAdvance}
+                >
                   Continue
                 </button>
               </div>
@@ -181,14 +352,21 @@ export function PackOpeningModal(props: {
           {showBoth && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
               {results?.masks.map((m, idx) => (
-                <div key={m.mask_id + m.color} className="animate-pop-in" style={{ animationDelay: `${idx * 0.1}s` }}>
+                <div
+                  key={m.mask_id + m.color}
+                  className="animate-pop-in"
+                  style={{ animationDelay: `${idx * 0.1}s` }}
+                >
                   <PackRevealCard
                     item={m}
                     emphasis="focused"
                     visible={true}
+                    alreadySeen={true}
                     onEquip={onEquip}
                     equipping={equipping}
                     useFinalState={true}
+                    currentToaEquipped={currentToaEquipped}
+                    currentTuragaEquipped={currentTuragaEquipped}
                   />
                 </div>
               ))}

@@ -9,70 +9,192 @@ import type {
   UserMask,
   UserPackProgress,
 } from "./types";
+import fs from "fs";
+import path from "path";
 
 const now = () => new Date();
 
+// Determine if we're in a server environment
+const isServer = typeof window === "undefined";
+const STORAGE_FILE = path.join(process.cwd(), ".kanohi_store.json");
+
 const masksSeed: Mask[] = [
-  // {
-  //   mask_id: "gen1_toa_01",
-  //   generation: 1,
-  //   name: "Kanohi Hau",
-  //   base_rarity: "RARE",
-  //   base_color_distribution: { standard: 80, alt_blue: 10, alt_black: 10 },
-  //   base_image_ids: { standard: "hau_std", alt_blue: "hau_blue", alt_black: "hau_black" },
-  //   buff_type: "PACK_LUCK",
-  //   buff_base_value: 0.0025,
-  //   max_level: 5,
-  //   description: "Defensive mask with pack luck",
-  // },
-  // {
-  //   mask_id: "gen1_toa_02",
-  //   generation: 1,
-  //   name: "Kanohi Kakama",
-  //   base_rarity: "COMMON",
-  //   base_color_distribution: { standard: 80, alt_green: 20 },
-  //   base_image_ids: { standard: "kakama_std", alt_green: "kakama_green" },
-  //   buff_type: "TIMER_SPEED",
-  //   buff_base_value: 0.01,
-  //   max_level: 10,
-  //   description: "Speed mask boosts timers",
-  // },
   {
     mask_id: "1",
     generation: 1,
-    name: "Noble Ruru",
-    base_rarity: "COMMON",
-    base_color_distribution: {
-      standard: 10,
-      alt_copper: 10,
-      blue: 30,
-      red: 30,
-      green: 20,
-    },
-    base_image_ids: {
-      standard: "ruru_std",
-      alt_copper: "ruru_copper",
-      blue: "ruru_blue",
-      red: "ruru_red",
-      green: "ruru_green",
-    },
-    buff_type: "DISCOVERY",
+    name: "Hau",
+    base_rarity: "RARE",
+    buff_type: "VISUAL",
     buff_base_value: 0.05,
     max_level: 10,
-    description: "Helps discover new masks",
+    description: "Great Mask of Shielding with no gameplay buff",
+    original_color: "red",
+    origin: "Toa Tahu",
+    maskOffsetY: -10,
   },
   {
-    mask_id: "gen1_mythic_01",
+    mask_id: "2",
     generation: 1,
-    name: "Mask of Time",
-    base_rarity: "MYTHIC",
-    base_color_distribution: { standard: 100 },
-    base_image_ids: { standard: "time_std" },
+    name: "Kaukau",
+    base_rarity: "RARE",
+    buff_type: "DISCOVERY",
+    buff_base_value: 0.02,
+    max_level: 5,
+    description: "Great Mask of Water Breathing with discovery boost",
+    transparent: true,
+    original_color: "blue",
+    origin: "Toa Gali",
+    maskOffsetY: -10,
+  },
+  {
+    mask_id: "3",
+    generation: 1,
+    name: "Miru",
+    base_rarity: "RARE",
+    buff_type: "DUPLICATE_EFF",
+    buff_base_value: 0.03,
+    max_level: 5,
+    description: "Great Mask of Levitation with duplicate efficiency boost",
+    original_color: "gold",
+    origin: "Toa Lewa",
+    maskOffsetY: -10,
+  },
+  {
+    mask_id: "4",
+    generation: 1,
+    name: "Kakama",
+    base_rarity: "RARE",
+    buff_type: "TIMER_SPEED",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Great Mask of Speed with cooldown reduction",
+    original_color: "brown",
+    origin: "Toa Pohatu",
+    maskOffsetY: -16,
+  },
+  {
+    mask_id: "5",
+    generation: 1,
+    name: "Akaku",
+    base_rarity: "RARE",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description:
+      "Great Mask of X-Ray vision with ability to inspect packs before opening",
+    original_color: "white",
+    origin: "Toa Kapaka",
+    maskOffsetY: -10,
+  },
+  {
+    mask_id: "6",
+    generation: 1,
+    name: "Pakari",
+    base_rarity: "RARE",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Great Mask of Strength empowering improved rarity odds.",
+    original_color: "black",
+    origin: "Toa Onua",
+    maskOffsetY: -10,
+  },
+  {
+    mask_id: "7",
+    generation: 1,
+    name: "Huna",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Noble Mask of Concealment empowering improved rarity odds.",
+    original_color: "orange",
+    origin: "Turaga Vakama",
+  },
+  {
+    mask_id: "8",
+    generation: 1,
+    name: "Rau",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description:
+      "Noble Mask of Translation empowering protodermis transmutation.",
+    original_color: "perriwinkle",
+    origin: "Turaga Nokama",
+  },
+  {
+    mask_id: "9",
+    generation: 1,
+    name: "Mahiki",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Noble Mask of Illusion empowering improved rarity odds.",
+    original_color: "lime",
+    origin: "Turaga Matau",
+  },
+  {
+    mask_id: "10",
+    generation: 1,
+    name: "Komau",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Noble Mask of Mind Control empowering improved rarity odds.",
+    original_color: "tan",
+    origin: "Turaga Onewa",
+  },
+  {
+    mask_id: "11",
+    generation: 1,
+    name: "Ruru",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Noble Mask of Night Vision empowering improved rarity odds.",
+    original_color: "dark gray",
+    origin: "Turaga Whenua",
+  },
+  {
+    mask_id: "12",
+    generation: 1,
+    name: "Ruru",
+    base_rarity: "COMMON",
+    buff_type: "INSPECT",
+    buff_base_value: 0,
+    max_level: 10,
+    description: "Noble Mask of Night Vision empowering improved rarity odds.",
+    original_color: "light gray",
+    origin: "Turaga Whenua",
+  },
+  {
+    mask_id: "999",
+    generation: 1,
+    name: "Kanohi Pakari",
+    base_rarity: "RARE",
     buff_type: "PACK_LUCK",
     buff_base_value: 0.01,
-    max_level: 3,
-    description: "Legendary mask increasing pack luck",
-    is_unique_mythic: true,
+    max_level: 8,
+    description: "Rare mask of strength with enhanced pack luck",
+    original_color: "standard",
+    origin: "Toa Fake Guy",
+  },
+  {
+    mask_id: "test1",
+    generation: 1,
+    name: "Test Mask 1",
+    base_rarity: "MYTHIC",
+    buff_type: "DISCOVERY",
+    buff_base_value: 0.15,
+    max_level: 15,
+    description: "Mythic test mask for testing purposes",
+    original_color: "standard",
+    origin: "Unit Test",
   },
 ];
 
@@ -108,6 +230,7 @@ const userMasksSeed: UserMask[] = [
     level: 1,
     equipped_slot: "TOA",
     unlocked_colors: ["red"],
+    equipped_color: "red",
     last_acquired_at: now(),
   },
 ];
@@ -130,13 +253,154 @@ function clone<T>(val: T): T {
   return JSON.parse(JSON.stringify(val));
 }
 
+// Storage keys for localStorage persistence
+const STORAGE_KEYS = {
+  USER_MASKS: "kanohi_user_masks",
+  USER_PACK_PROGRESS: "kanohi_user_pack_progress",
+  EVENTS: "kanohi_events",
+};
+
+// Server-side file store helper
+function loadFromFile() {
+  try {
+    if (fs.existsSync(STORAGE_FILE)) {
+      const content = fs.readFileSync(STORAGE_FILE, "utf-8");
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error("Failed to load store from file:", e);
+  }
+  return null;
+}
+
+function saveToFile(data: any) {
+  try {
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.error("Failed to save store to file:", e);
+  }
+}
+
+// Load from localStorage (client) or file (server) if available, otherwise use seed data
+function loadUserMasks(): UserMask[] {
+  let stored: any = null;
+
+  if (typeof window !== "undefined") {
+    // Client side
+    const item = localStorage.getItem(STORAGE_KEYS.USER_MASKS);
+    stored = item ? JSON.parse(item) : null;
+  } else {
+    // Server side
+    const fileData = loadFromFile();
+    stored = fileData?.userMasks;
+  }
+
+  if (stored) {
+    try {
+      return stored.map((m: any) => ({
+        ...m,
+        last_acquired_at: new Date(m.last_acquired_at),
+      }));
+    } catch (e) {
+      console.error("Failed to parse stored user masks:", e);
+    }
+  }
+
+  return clone(userMasksSeed);
+}
+
+function loadUserPackProgress(): UserPackProgress[] {
+  let stored: any = null;
+
+  if (typeof window !== "undefined") {
+    // Client side
+    const item = localStorage.getItem(STORAGE_KEYS.USER_PACK_PROGRESS);
+    stored = item ? JSON.parse(item) : null;
+  } else {
+    // Server side
+    const fileData = loadFromFile();
+    stored = fileData?.userPackProgress;
+  }
+
+  if (stored) {
+    try {
+      return stored.map((p: any) => ({
+        ...p,
+        last_unit_ts: new Date(p.last_unit_ts),
+        last_pack_claim_ts: p.last_pack_claim_ts
+          ? new Date(p.last_pack_claim_ts)
+          : null,
+      }));
+    } catch (e) {
+      console.error("Failed to parse stored pack progress:", e);
+    }
+  }
+
+  return clone(userPackProgressSeed);
+}
+
+function loadEvents(): EventRow[] {
+  let stored: any = null;
+
+  if (typeof window !== "undefined") {
+    // Client side
+    const item = localStorage.getItem(STORAGE_KEYS.EVENTS);
+    stored = item ? JSON.parse(item) : null;
+  } else {
+    // Server side
+    const fileData = loadFromFile();
+    stored = fileData?.events;
+  }
+
+  if (stored) {
+    try {
+      return stored.map((e: any) => ({
+        ...e,
+        timestamp: new Date(e.timestamp),
+      }));
+    } catch (e) {
+      console.error("Failed to parse stored events:", e);
+    }
+  }
+
+  return clone(eventsSeed);
+}
+
+// Save helpers
+function saveUserMasks(): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEYS.USER_MASKS, JSON.stringify(userMasks));
+  } else {
+    saveToFile({ userMasks, userPackProgress, events });
+  }
+}
+
+function saveUserPackProgress(): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(
+      STORAGE_KEYS.USER_PACK_PROGRESS,
+      JSON.stringify(userPackProgress)
+    );
+  } else {
+    saveToFile({ userMasks, userPackProgress, events });
+  }
+}
+
+function saveEvents(): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(events));
+  } else {
+    saveToFile({ userMasks, userPackProgress, events });
+  }
+}
+
 let masks: Mask[] = clone(masksSeed);
 let packs: Pack[] = clone(packsSeed);
 let users: User[] = clone(usersSeed);
-let userMasks: UserMask[] = clone(userMasksSeed);
-let userPackProgress: UserPackProgress[] = clone(userPackProgressSeed);
+let userMasks: UserMask[] = loadUserMasks();
+let userPackProgress: UserPackProgress[] = loadUserPackProgress();
 let friends: Friend[] = clone(friendsSeed);
-let events: EventRow[] = clone(eventsSeed);
+let events: EventRow[] = loadEvents();
 
 export const db = {
   get masks() {
@@ -170,13 +434,30 @@ export function resetStore(): void {
   userPackProgress = clone(userPackProgressSeed);
   friends = clone(friendsSeed);
   events = clone(eventsSeed);
+  // Also clear the server-side storage file
+  try {
+    if (fs.existsSync(STORAGE_FILE)) {
+      fs.unlinkSync(STORAGE_FILE);
+    }
+  } catch (e) {
+    console.error("Failed to clear store file:", e);
+  }
+  // Clear client-side storage
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(STORAGE_KEYS.USER_MASKS);
+    localStorage.removeItem(STORAGE_KEYS.USER_PACK_PROGRESS);
+    localStorage.removeItem(STORAGE_KEYS.EVENTS);
+  }
 }
 
 export function getUser(userId: string): User | undefined {
   return users.find((u) => u.id === userId);
 }
 
-export function getUserMask(userId: string, maskId: string): UserMask | undefined {
+export function getUserMask(
+  userId: string,
+  maskId: string
+): UserMask | undefined {
   return userMasks.find((m) => m.user_id === userId && m.mask_id === maskId);
 }
 
@@ -187,6 +468,7 @@ export function upsertUserMask(entry: UserMask): void {
   } else {
     userMasks.push(entry);
   }
+  saveUserMasks();
 }
 
 export function getUserMasks(userId: string): UserMask[] {
@@ -201,21 +483,30 @@ export function getMask(maskId: string): Mask | undefined {
   return masks.find((m) => m.mask_id === maskId);
 }
 
-export function getUserPackProgress(userId: string, packId: string): UserPackProgress | undefined {
-  return userPackProgress.find((p) => p.user_id === userId && p.pack_id === packId);
+export function getUserPackProgress(
+  userId: string,
+  packId: string
+): UserPackProgress | undefined {
+  return userPackProgress.find(
+    (p) => p.user_id === userId && p.pack_id === packId
+  );
 }
 
 export function updateUserPackProgress(progress: UserPackProgress): void {
-  const idx = userPackProgress.findIndex((p) => p.user_id === progress.user_id && p.pack_id === progress.pack_id);
+  const idx = userPackProgress.findIndex(
+    (p) => p.user_id === progress.user_id && p.pack_id === progress.pack_id
+  );
   if (idx >= 0) {
     userPackProgress[idx] = progress;
   } else {
     userPackProgress.push(progress);
   }
+  saveUserPackProgress();
 }
 
 export function appendEvent(evt: EventRow): void {
   events.push(evt);
+  saveEvents();
 }
 
 export function nowSeconds(): number {
