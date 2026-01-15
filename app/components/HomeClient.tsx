@@ -14,6 +14,7 @@ import { useEquipMask } from "../hooks/useEquipMask";
 import { useMe } from "../hooks/useMe";
 import { usePackOpening } from "../hooks/usePackOpening";
 import { useStatus } from "../hooks/useStatus";
+import { TimeToReadyCountdown } from "./TimeToReadyCountdown";
 
 interface HomeClientProps {
   initialStatus: StatusPayload;
@@ -24,7 +25,7 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
   // Use hooks for real-time updates, but start with server data
   const { status, refreshStatus } = useStatus();
   const { me, refreshMe } = useMe();
-  
+
   const currentStatus = status ?? initialStatus;
   const currentMe = me ?? initialMe;
 
@@ -84,20 +85,26 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
 
   const maskNameById = useMemo(
     () =>
-      new Map(currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? []),
+      new Map(
+        currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? []
+      ),
     [currentMe?.collection]
   );
 
   const maskRarityById = useMemo(
     () =>
-      new Map(currentMe?.collection?.map((m) => [m.mask_id, m.rarity] as const) ?? []),
+      new Map(
+        currentMe?.collection?.map((m) => [m.mask_id, m.rarity] as const) ?? []
+      ),
     [currentMe?.collection]
   );
 
   const maskTransparentById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.transparent] as const) ?? []
+        currentMe?.collection?.map(
+          (m) => [m.mask_id, m.transparent] as const
+        ) ?? []
       ),
     [currentMe?.collection]
   );
@@ -105,7 +112,8 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
   const maskBuffTypeById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.buff_type] as const) ?? []
+        currentMe?.collection?.map((m) => [m.mask_id, m.buff_type] as const) ??
+          []
       ),
     [currentMe?.collection]
   );
@@ -113,7 +121,9 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
   const maskDescriptionById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.description] as const) ?? []
+        currentMe?.collection?.map(
+          (m) => [m.mask_id, m.description] as const
+        ) ?? []
       ),
     [currentMe?.collection]
   );
@@ -121,7 +131,9 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
   const maskOffsetYById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.offsetY ?? 0] as const) ?? []
+        currentMe?.collection?.map(
+          (m) => [m.mask_id, m.offsetY ?? 0] as const
+        ) ?? []
       ),
     [currentMe?.collection]
   );
@@ -202,20 +214,21 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
 
       <section className="card">
         <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-          Timers / Pack progress
+          Pack progress
         </h2>
         {currentStatus ? (
           <div className="mt-3 space-y-2">
             <div className="text-sm text-slate-600">
-              {currentStatus.pack_ready
-                ? "Ready now"
-                : `Ready in ${currentStatus.time_to_ready}s`}
-            </div>
-            <div className="text-xs text-slate-500">
-              Fractional units: {currentStatus.fractional_units}
-            </div>
-            <div className="text-xs text-slate-500">
-              Pity counter: {currentStatus.pity_counter}
+              {currentStatus.pack_ready ? (
+                "Ready now"
+              ) : (
+                <>
+                  <TimeToReadyCountdown
+                    initialSeconds={currentStatus.time_to_ready}
+                  />
+                  until next pack is ready
+                </>
+              )}
             </div>
           </div>
         ) : (

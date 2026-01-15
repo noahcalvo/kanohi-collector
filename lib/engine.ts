@@ -40,18 +40,19 @@ function refreshFractionalUnits<
   const last = Math.floor(progress.last_unit_ts.getTime() / 1000);
   const elapsed = Math.max(current - last, 0);
   const speedMultiplier = 1 + timerSpeedBonus;
-  const unitsGained = Math.floor(
-    (elapsed * speedMultiplier) / PACK_UNIT_SECONDS
-  );
+  const totalUnitsGained = (elapsed * speedMultiplier) / PACK_UNIT_SECONDS;
+  const unitsGained = Math.floor(totalUnitsGained);
   if (unitsGained > 0) {
     progress.fractional_units = Math.min(
       progress.fractional_units + unitsGained,
       PACK_UNITS_PER_PACK
     );
+    // Set last_unit_ts to the time when the most recent unit was earned
     const newTimestampSeconds =
       last + Math.floor((unitsGained * PACK_UNIT_SECONDS) / speedMultiplier);
     progress.last_unit_ts = new Date(newTimestampSeconds * 1000);
   }
+  // If no units were gained, do not update last_unit_ts
   return progress;
 }
 
@@ -495,10 +496,11 @@ export async function packStatus(
     PACK_UNITS_PER_PACK - refreshed.fractional_units,
     0
   );
-  const timeToReady = Math.max(
-    Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
-    0
-  );
+  const timeToReady =
+    Math.max(
+      Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
+      0
+    ) - timeSince;
   warn(
     `[packStatus] Calculated: timeSince=${timeSince}, speedMultiplier=${speedMultiplier}, unitsGained=${unitsGained}, unitsNeeded=${unitsNeeded}, timeToReady=${timeToReady}`
   );
