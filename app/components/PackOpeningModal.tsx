@@ -90,7 +90,7 @@ export function PackOpeningModal(props: {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex sm:items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm overflow-scroll"
       role="dialog"
       aria-modal="true"
       aria-label="Pack opening"
@@ -119,7 +119,7 @@ export function PackOpeningModal(props: {
           </div>
         )}
 
-        <div className="mt-6 flex flex-col items-center">
+        <div className="mt-6 flex flex-col items-center pb-4">
           {!showFirstOnly && !showSecondOnly && !showBoth && (
             <>
               {stage === "waiting" ? (
@@ -349,7 +349,7 @@ export function PackOpeningModal(props: {
           )}
 
           {showBoth && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full overflow-scroll max-h-[100vh]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
               {results?.masks.map((m, idx) => (
                 <div
                   key={m.mask_id + m.color}
