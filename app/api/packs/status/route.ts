@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { packStatus } from "../../../../lib/engine";
 import { getUserIdOrThrow } from "../../../../lib/auth";
+import { packStatus } from "../../../../lib/engine";
 
 export async function GET() {
   try {
-    const userId = getUserIdOrThrow();
+    const userId = await getUserIdOrThrow();
     const status = await packStatus(userId, "free_daily_v1");
     return NextResponse.json(status);
   } catch (err) {

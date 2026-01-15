@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
-import type { GameStore } from "./gameStore";
-import type { EventRow, User, UserMask, UserPackProgress } from "../types";
-import { prisma } from "../db/prisma";
 import { PACK_UNITS_PER_PACK } from "../constants";
+import { prisma } from "../db/prisma";
+import type { EventRow, User, UserMask, UserPackProgress } from "../types";
+import type { GameStore } from "./gameStore";
 
 function toUser(u: { id: string; createdAt: Date; updatedAt: Date }): User {
   return {
@@ -83,7 +83,10 @@ export const prismaStore: GameStore = {
     return toUser(user);
   },
 
-  async getUserMask(userId: string, maskId: string): Promise<UserMask | undefined> {
+  async getUserMask(
+    userId: string,
+    maskId: string
+  ): Promise<UserMask | undefined> {
     const row = await prisma.userMask.findUnique({
       where: { userId_maskId: { userId, maskId } },
     });
@@ -97,7 +100,9 @@ export const prismaStore: GameStore = {
 
   async upsertUserMask(entry: UserMask): Promise<void> {
     await prisma.userMask.upsert({
-      where: { userId_maskId: { userId: entry.user_id, maskId: entry.mask_id } },
+      where: {
+        userId_maskId: { userId: entry.user_id, maskId: entry.mask_id },
+      },
       create: {
         id: entry.id || undefined,
         userId: entry.user_id,
@@ -122,7 +127,10 @@ export const prismaStore: GameStore = {
     });
   },
 
-  async getUserPackProgress(userId: string, packId: string): Promise<UserPackProgress | undefined> {
+  async getUserPackProgress(
+    userId: string,
+    packId: string
+  ): Promise<UserPackProgress | undefined> {
     const row = await prisma.userPackProgress.findUnique({
       where: { userId_packId: { userId, packId } },
     });
@@ -155,7 +163,7 @@ export const prismaStore: GameStore = {
     await prisma.eventRow.create({
       data: {
         eventId: evt.event_id || randomUUID(),
-        userId: evt.user_id,
+        userId: evt.user_id ?? "none",
         type: evt.type,
         payload: evt.payload as any,
         timestamp: evt.timestamp,

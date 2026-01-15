@@ -1,4 +1,4 @@
-import type { CollectionMask } from "../../../lib/types";
+import { CollectionMask } from "../../../../lib/types";
 
 const DEFAULT_COLORS_BY_RARITY: Record<string, string[]> = {
   COMMON: [
@@ -30,8 +30,10 @@ export function calculateColorStatsFallback(
     let available = 0;
 
     allMasks.forEach((mask) => {
-      const maskRarity = mask.base_rarity as keyof typeof DEFAULT_COLORS_BY_RARITY;
-      const availableColorsForRarity = DEFAULT_COLORS_BY_RARITY[maskRarity] || [];
+      const maskRarity =
+        mask.base_rarity as keyof typeof DEFAULT_COLORS_BY_RARITY;
+      const availableColorsForRarity =
+        DEFAULT_COLORS_BY_RARITY[maskRarity] || [];
 
       if (availableColorsForRarity.includes(color)) {
         available++;

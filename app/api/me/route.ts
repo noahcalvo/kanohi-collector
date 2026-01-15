@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { mePayload } from "../../../lib/engine";
 import { getUserIdOrThrow } from "../../../lib/auth";
+import { mePayload } from "../../../lib/engine";
 
 export async function GET() {
   try {
-    const userId = getUserIdOrThrow();
+    const userId = await getUserIdOrThrow();
     const payload = await mePayload(userId);
     return NextResponse.json(payload);
   } catch (err) {

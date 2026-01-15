@@ -33,6 +33,7 @@ export function getBuffDescription(buffType: BuffType): string {
     DUPLICATE_EFF: "Increases protodermis earned from duplicate masks",
     DISCOVERY: "Increases chance of discovering new masks you don't own",
     VISUAL: "Purely cosmetic - no gameplay buff",
+    INSPECT: "Allows for occasional inspection of mask packs",
   };
   return buffDescriptions[buffType] || "Unknown buff";
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { openPack } from "../../../../lib/engine";
 import { getUserIdOrThrow } from "../../../../lib/auth";
+import { openPack } from "../../../../lib/engine";
 
 const schema = z.object({
   pack_id: z.string(),
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[packs/open] Request body:", body);
     const parsed = schema.parse(body);
-    const userId = getUserIdOrThrow();
+    const userId = await getUserIdOrThrow();
     const now = Date.now();
     const cacheKey = `${userId}:${parsed.client_request_id}`;
     const cached = recent.get(cacheKey);
