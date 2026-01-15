@@ -99,7 +99,7 @@ export function PackOpeningModal(props: {
       }}
     >
       <div
-        className="w-full max-w-xl relative"
+        className="w-full max-w-3xl relative"
         onMouseDown={(e) => {
           e.stopPropagation();
         }}
@@ -349,7 +349,7 @@ export function PackOpeningModal(props: {
           )}
 
           {showBoth && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full overflow-scroll max-h-[100vh]">
               {results?.masks.map((m, idx) => (
                 <div
                   key={m.mask_id + m.color}

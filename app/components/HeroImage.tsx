@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { ColoredMask } from "./ColoredMask";
-import { NakedHead } from "./NakedHead";
 
 function heroSrc(maskId: string): string | null {
   const match = maskId.match(/_(\d{2})$/);

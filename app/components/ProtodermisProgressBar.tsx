@@ -54,7 +54,12 @@ export function ProtodermisProgressBar({
             : ""}
         </span>
       </div>
-      <div className="relative h-2 bg-slate-600/70 rounded-full overflow-hidden">
+      <div
+        className={
+          "relative h-2 rounded-full overflow-hidden " +
+          (mythicHighlight ? "bg-slate-600/70" : "bg-slate-500/30")
+        }
+      >
         {(() => {
           // Calculate progress percentage towards next level
           const baseEssence =

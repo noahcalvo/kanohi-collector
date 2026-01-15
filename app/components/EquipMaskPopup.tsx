@@ -9,6 +9,7 @@ export default function EquipMaskPopup({
   onClose,
   currentToaEquipped,
   currentTuragaEquipped,
+  above = false,
 }: {
   item: DrawResultItem;
   equipping?: string | null;
@@ -33,6 +34,7 @@ export default function EquipMaskPopup({
     transparent?: boolean;
     offsetY?: number;
   } | null;
+  above?: boolean;
 }) {
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +57,9 @@ export default function EquipMaskPopup({
   return (
     <div
       ref={popupRef}
-      className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-xl border border-slate-200 p-4 min-w-[252px] z-[20]"
+      className={`absolute ${
+        above ? "bottom-full mb-2" : "top-full mt-2"
+      } left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-xl border border-slate-200 p-4 min-w-[252px] z-[20]`}
     >
       <div className="text-xs font-semibold text-slate-700 mb-3 text-center">
         Choose Slot

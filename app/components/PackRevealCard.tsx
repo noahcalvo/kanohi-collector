@@ -136,7 +136,7 @@ export function PackRevealCard(props: {
       className={
         "relative transition-all duration-500 ease-out " +
         (visible
-          ? "opacity-100 translate-y-0"
+          ? "opacity-100 translate-y-0 "
           : "opacity-0 translate-y-2 pointer-events-none") +
         (!alreadySeen && (item.is_new || item.was_color_new)
           ? " animate-flare-in"
@@ -224,13 +224,13 @@ export function PackRevealCard(props: {
           {alreadySeen === true && (
             <>
               {item.is_new && (
-                <div className="animate-pulse-opaque text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border border-gray-700 bg-white/85 text-gray-700">
+                <div className="animate-pulse-opaque text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full text-gray-700">
                   New Mask
                 </div>
               )}
               {item.was_color_new && item.color !== "standard" && (
-                <div className="animate-pulse-opaque text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-white/85">
-                  <span className="new-color-text relative z-20">
+                <div className="bg-white text-[11px] uppercase tracking-wide px-2 py-0.5 rounded-full">
+                  <span className="new-color-text relative z-20 text-shadow-lg/60 font-extrabold contrast-200">
                     Color Unlocked
                   </span>
                 </div>
@@ -333,6 +333,7 @@ export function PackRevealCard(props: {
                   onClose={() => setShowEquipPopup(false)}
                   currentToaEquipped={currentToaEquipped}
                   currentTuragaEquipped={currentTuragaEquipped}
+                  above={true}
                 />
               )}
             </div>

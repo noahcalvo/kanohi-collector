@@ -16,6 +16,9 @@ const config: Config = {
           "70%": { transform: "translateX(-2px) rotate(-0.5deg)" },
           "80%": { transform: "translateX(2px) rotate(0.5deg)" },
         },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         "chest-shake": "chest-shake 650ms ease-in-out 2",

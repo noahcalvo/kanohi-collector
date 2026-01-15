@@ -14,7 +14,7 @@ const COLOR_HEX_MAP: Record<string, string> = {
   orange: "#ff8c00",
   perriwinkle: "#00b3ff",
   lime: "#a8e62e",
-  "light gray": "#c9c9c9",
+  "light gray": "#dfe4ed",
   "dark gray": "#63635F",
   tan: "#dbb686",
   gold: "#b8860b",

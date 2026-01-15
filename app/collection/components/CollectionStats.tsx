@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import type { CollectionMask, Rarity } from "../../../lib/types";
-import { OverallCompletion } from "../components/CollectionStats/OverallCompletion";
-import { MythicCounter } from "../components/CollectionStats/MythicCounter";
-import { StrongestMasks } from "../components/CollectionStats/StrongestMasks";
-import { RarityBreakdown } from "../components/CollectionStats/RarityBreakdown";
-import { ColorUnlockProgress } from "../components/CollectionStats/ColorUnlockProgress";
 import { calculateColorStatsFallback } from "../components/CollectionStats/calculateColorStats";
+import { ColorUnlockProgress } from "../components/CollectionStats/ColorUnlockProgress";
+import { MythicCounter } from "../components/CollectionStats/MythicCounter";
+import { OverallCompletion } from "../components/CollectionStats/OverallCompletion";
+import { RarityBreakdown } from "../components/CollectionStats/RarityBreakdown";
+import { StrongestMasks } from "../components/CollectionStats/StrongestMasks";
 
 export function CollectionStats({
   collection,
@@ -88,7 +88,7 @@ export function CollectionStats({
 
       {isExpanded && (
         <div className="px-4 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-visible">
             <OverallCompletion
               percent={overallPercent}
               owned={totalOwned}
