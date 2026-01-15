@@ -16,6 +16,7 @@ import type { GameStore } from "./store/gameStore";
 import { prismaStore } from "./store/prismaStore";
 import { masks as maskDefs, packs as packDefs } from "./staticData";
 import type { CollectionMask, DrawResultItem, Mask, OpenResult, Rarity, UserMask, EquipSlot } from "./types";
+import { warn } from "console";
 
 const db = {
   masks: maskDefs,
@@ -39,7 +40,9 @@ function refreshFractionalUnits<
   const last = Math.floor(progress.last_unit_ts.getTime() / 1000);
   const elapsed = Math.max(current - last, 0);
   const speedMultiplier = 1 + timerSpeedBonus;
-  const unitsGained = Math.floor((elapsed * speedMultiplier) / PACK_UNIT_SECONDS);
+  const unitsGained = Math.floor(
+    (elapsed * speedMultiplier) / PACK_UNIT_SECONDS
+  );
   if (unitsGained > 0) {
     progress.fractional_units = Math.min(
       progress.fractional_units + unitsGained,
@@ -68,7 +71,11 @@ function seededRandom(seed: string): () => number {
   };
 }
 
-function weightedSample<T>(items: T[], weights: number[], rand: () => number): T {
+function weightedSample<T>(
+  items: T[],
+  weights: number[],
+  rand: () => number
+): T {
   const total = weights.reduce((a, b) => a + b, 0);
   const r = rand() * total;
   let acc = 0;
@@ -187,7 +194,9 @@ function sampleMaskByRarity(
   if (candidates.length === 0) {
     throw new Error("No masks available for rarity");
   }
-  const weights = candidates.map((m) => (ownedMaskIds.has(m.mask_id) ? 0.2 : 1));
+  const weights = candidates.map((m) =>
+    ownedMaskIds.has(m.mask_id) ? 0.2 : 1
+  );
   return weightedSample(candidates, weights, rand);
 }
 
@@ -201,7 +210,9 @@ function trySampleMaskByRarity(
     (m) => m.base_rarity === rarity && !exclude.has(m.mask_id)
   );
   if (candidates.length === 0) return null;
-  const weights = candidates.map((m) => (ownedMaskIds.has(m.mask_id) ? 0.2 : 1));
+  const weights = candidates.map((m) =>
+    ownedMaskIds.has(m.mask_id) ? 0.2 : 1
+  );
   return weightedSample(candidates, weights, rand);
 }
 
@@ -256,7 +267,12 @@ function discoveryReroll(
     const chance = Math.min(discoveryBonus, DISCOVERY_REROLL_CAP);
     if (rand() >= chance) break;
     const exclude = new Set<string>([selected.mask_id]);
-    const candidate = trySampleMaskByRarity(rarity, rand, exclude, ownedMaskIds);
+    const candidate = trySampleMaskByRarity(
+      rarity,
+      rand,
+      exclude,
+      ownedMaskIds
+    );
     if (!candidate) break;
     if (!ownedMaskIds.has(candidate.mask_id)) {
       selected = candidate;
@@ -279,6 +295,9 @@ export async function openPack(
 
   let progress = await store.getUserPackProgress(userId, packId);
   if (!progress) {
+    warn(
+      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`
+    );
     progress = {
       user_id: userId,
       pack_id: packId,
@@ -436,6 +455,9 @@ export async function packStatus(
   await store.getOrCreateUser(userId);
   let progress = await store.getUserPackProgress(userId, packId);
   if (!progress) {
+    warn(
+      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`
+    );
     progress = {
       user_id: userId,
       pack_id: packId,
@@ -492,6 +514,9 @@ export async function mePayload(
   const buffs = await computeBuffs(userId, store);
   let progress = await store.getUserPackProgress(userId, "free_daily_v1");
   if (!progress) {
+    warn(
+      `packStatus: no progress found for user ${userId} and pack free_daily_v1, initializing`
+    );
     progress = {
       user_id: userId,
       pack_id: "free_daily_v1",
