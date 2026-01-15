@@ -454,6 +454,10 @@ export async function packStatus(
 ) {
   await store.getOrCreateUser(userId);
   let progress = await store.getUserPackProgress(userId, packId);
+  warn(
+    `[packStatus] DB progress for user ${userId}, pack ${packId}:`,
+    progress
+  );
   if (!progress) {
     warn(
       `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`
@@ -470,9 +474,10 @@ export async function packStatus(
   }
   const buffs = await computeBuffs(userId, store);
   const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
-  await store.upsertUserPackProgress(refreshed);
+  warn(`[packStatus] Refreshed progress:`, refreshed);
 
   if (PACK_UNIT_SECONDS <= 0) {
+    warn(`[packStatus] Timer disabled, returning ready`);
     return {
       pack_ready: true,
       time_to_ready: 0,
@@ -494,13 +499,18 @@ export async function packStatus(
     Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
     0
   );
-  return {
+  warn(
+    `[packStatus] Calculated: timeSince=${timeSince}, speedMultiplier=${speedMultiplier}, unitsGained=${unitsGained}, unitsNeeded=${unitsNeeded}, timeToReady=${timeToReady}`
+  );
+  const result = {
     pack_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK,
     time_to_ready:
       refreshed.fractional_units >= PACK_UNITS_PER_PACK ? 0 : timeToReady,
     fractional_units: refreshed.fractional_units,
     pity_counter: refreshed.pity_counter,
   };
+  warn(`[packStatus] Returning:`, result);
+  return result;
 }
 
 export async function mePayload(
