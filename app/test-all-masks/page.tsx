@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { getAvailableColors } from "../../lib/engine";
-import { db } from "../../lib/store";
+import { masks } from "../../lib/staticData";
 import { type Rarity } from "../../lib/types";
 import { ColoredMask } from "../components/ColoredMask";
 import { colorToHex } from "../../lib/colors";
 
 export default function TestAllMasksPage() {
-  const allMasks = useMemo(() => db.masks, []);
+  const allMasks = useMemo(() => masks, []);
   const rarities: Rarity[] = useMemo(() => ["COMMON", "RARE", "MYTHIC"], []);
 
   const masksByGeneration = useMemo(() => {

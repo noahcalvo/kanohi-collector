@@ -12,6 +12,8 @@ import { useEquipMask } from "./hooks/useEquipMask";
 import { useMe } from "./hooks/useMe";
 import { usePackOpening } from "./hooks/usePackOpening";
 import { useStatus } from "./hooks/useStatus";
+import Link from "next/link";
+import { ArrowBigRight, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const { status, refreshStatus } = useStatus();
@@ -107,6 +109,14 @@ export default function Home() {
     [me?.collection]
   );
 
+  const maskOffsetYById = useMemo(
+    () =>
+      new Map(
+        me?.collection?.map((m) => [m.mask_id, m.offsetY ?? 0] as const) ?? []
+      ),
+    [me?.collection]
+  );
+
   const equippedToa =
     me?.equipped.find((m) => m.equipped_slot === "TOA") ?? null;
   const equippedTuraga =
@@ -114,17 +124,16 @@ export default function Home() {
 
   const EmptySlotCard = ({ slot }: { slot: "TOA" | "TURAGA" }) => (
     <ArtCard
-      index={0}
-      popoverWidthClass="w-72"
       popover={
         <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
           <div className="text-xs text-slate-500 uppercase tracking-wide">
             {slot} slot
           </div>
           <div className="text-sm text-slate-700 mt-2">Nothing equipped.</div>
-          <div className="text-sm text-slate-700 mt-2">
-            Equip a mask from Collection.
-          </div>
+          <Link href="/collection" className="text-sm text-slate-700 mt-2">
+            Equip a mask from Collection
+            <ArrowRight size={16} className="inline-block ml-1 mb-[3px]" />
+          </Link>
         </div>
       }
     >
@@ -242,11 +251,11 @@ export default function Home() {
                 }
                 onChangeColor={changeColorAndClear}
                 changing={changing}
-                showColorPicker={false}
                 rarity={maskRarityById.get(equippedToa.mask_id) ?? "COMMON"}
                 transparent={maskTransparentById.get(equippedToa.mask_id)}
                 buffType={maskBuffTypeById.get(equippedToa.mask_id) ?? "VISUAL"}
                 description={maskDescriptionById.get(equippedToa.mask_id) ?? ""}
+                offsetY={maskOffsetYById.get(equippedToa.mask_id) ?? 0}
               />
             ) : (
               <EmptySlotCard slot="TOA" />
@@ -262,7 +271,6 @@ export default function Home() {
                 }
                 onChangeColor={changeColorAndClear}
                 changing={changing}
-                showColorPicker={false}
                 rarity={maskRarityById.get(equippedTuraga.mask_id) ?? "COMMON"}
                 transparent={maskTransparentById.get(equippedTuraga.mask_id)}
                 buffType={
@@ -271,6 +279,7 @@ export default function Home() {
                 description={
                   maskDescriptionById.get(equippedTuraga.mask_id) ?? ""
                 }
+                offsetY={maskOffsetYById.get(equippedTuraga.mask_id) ?? 0}
               />
             ) : (
               <EmptySlotCard slot="TURAGA" />

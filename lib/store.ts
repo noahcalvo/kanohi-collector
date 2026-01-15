@@ -57,7 +57,7 @@ const masksSeed: Mask[] = [
     description: "Great Mask of Levitation with duplicate efficiency boost",
     original_color: "gold",
     origin: "Toa Lewa",
-    maskOffsetY: -10,
+    maskOffsetY: -12,
   },
   {
     mask_id: "4",
@@ -110,6 +110,7 @@ const masksSeed: Mask[] = [
     description: "Noble Mask of Concealment empowering improved rarity odds.",
     original_color: "orange",
     origin: "Turaga Vakama",
+    maskOffsetY: -6,
   },
   {
     mask_id: "8",
@@ -123,6 +124,7 @@ const masksSeed: Mask[] = [
       "Noble Mask of Translation empowering protodermis transmutation.",
     original_color: "perriwinkle",
     origin: "Turaga Nokama",
+    maskOffsetY: -14,
   },
   {
     mask_id: "9",
@@ -135,6 +137,7 @@ const masksSeed: Mask[] = [
     description: "Noble Mask of Illusion empowering improved rarity odds.",
     original_color: "lime",
     origin: "Turaga Matau",
+    maskOffsetY: -16,
   },
   {
     mask_id: "10",
@@ -147,6 +150,7 @@ const masksSeed: Mask[] = [
     description: "Noble Mask of Mind Control empowering improved rarity odds.",
     original_color: "tan",
     origin: "Turaga Onewa",
+    maskOffsetY: -14,
   },
   {
     mask_id: "11",
@@ -159,42 +163,32 @@ const masksSeed: Mask[] = [
     description: "Noble Mask of Night Vision empowering improved rarity odds.",
     original_color: "dark gray",
     origin: "Turaga Whenua",
+    maskOffsetY: -16,
   },
   {
     mask_id: "12",
     generation: 1,
-    name: "Ruru",
+    name: "Matatu",
     base_rarity: "COMMON",
     buff_type: "INSPECT",
     buff_base_value: 0,
     max_level: 10,
-    description: "Noble Mask of Night Vision empowering improved rarity odds.",
-    original_color: "light gray",
-    origin: "Turaga Whenua",
+    description: "Noble Mask of Telekenisis empowering improved rarity odds.",
+    original_color: "white",
+    origin: "Turaga Nuju",
+    maskOffsetY: -14,
   },
   {
-    mask_id: "999",
+    mask_id: "13",
     generation: 1,
-    name: "Kanohi Pakari",
-    base_rarity: "RARE",
-    buff_type: "PACK_LUCK",
-    buff_base_value: 0.01,
-    max_level: 8,
-    description: "Rare mask of strength with enhanced pack luck",
-    original_color: "standard",
-    origin: "Toa Fake Guy",
-  },
-  {
-    mask_id: "test1",
-    generation: 1,
-    name: "Test Mask 1",
+    name: "Weird thing",
     base_rarity: "MYTHIC",
     buff_type: "DISCOVERY",
     buff_base_value: 0.15,
     max_level: 15,
     description: "Mythic test mask for testing purposes",
-    original_color: "standard",
-    origin: "Unit Test",
+    original_color: "gold",
+    origin: "Toa Fake Guy",
   },
 ];
 
@@ -462,9 +456,27 @@ export function getUserMask(
 }
 
 export function upsertUserMask(entry: UserMask): void {
-  const existingIdx = userMasks.findIndex((m) => m.id === entry.id);
-  if (existingIdx >= 0) {
-    userMasks[existingIdx] = entry;
+  // User masks must be unique per (user_id, mask_id). Previously we keyed by `id`,
+  // which allowed duplicate rows for the same mask and user.
+  const matchingIdxs: number[] = [];
+  for (let i = 0; i < userMasks.length; i += 1) {
+    const m = userMasks[i];
+    if (m.user_id === entry.user_id && m.mask_id === entry.mask_id) {
+      matchingIdxs.push(i);
+    }
+  }
+
+  if (matchingIdxs.length > 0) {
+    const keepIdx = matchingIdxs[0];
+    const existing = userMasks[keepIdx];
+
+    // Preserve the existing id to avoid breaking any references.
+    userMasks[keepIdx] = { ...entry, id: existing.id };
+
+    // Remove any additional duplicates (self-heal old stores).
+    for (let i = matchingIdxs.length - 1; i >= 1; i -= 1) {
+      userMasks.splice(matchingIdxs[i], 1);
+    }
   } else {
     userMasks.push(entry);
   }

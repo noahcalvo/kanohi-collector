@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { packStatus } from "../../../../lib/engine";
-
-const USER_ID = "user-1";
+import { getUserIdOrThrow } from "../../../../lib/auth";
 
 export async function GET() {
   try {
-    const status = packStatus(USER_ID, "free_daily_v1");
+    const userId = getUserIdOrThrow();
+    const status = await packStatus(userId, "free_daily_v1");
     return NextResponse.json(status);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

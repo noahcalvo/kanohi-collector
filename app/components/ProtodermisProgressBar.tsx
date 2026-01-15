@@ -6,14 +6,21 @@ export function ProtodermisProgressBar({
   item,
   displayLevel,
   displayEssence,
+  mythicHighlight,
 }: {
   item: DrawResultItem;
   displayLevel: number;
   displayEssence: number;
+  mythicHighlight?: boolean;
 }) {
   return (
     <div className="mt-4 space-y-1.5 relative">
-      <div className="flex items-center justify-between text-xs text-slate-600">
+      <div
+        className={
+          "flex items-center justify-between text-xs " +
+          (mythicHighlight ? " font-bold text-slate-300" : "text-slate-600")
+        }
+      >
         <span className="font-semibold relative inline-block min-w-[60px]">
           {displayLevel > item.level_before ? (
             <>
@@ -47,15 +54,11 @@ export function ProtodermisProgressBar({
             : ""}
         </span>
       </div>
-      <div className="relative h-2 bg-slate-200/70 rounded-full overflow-hidden">
+      <div className="relative h-2 bg-slate-600/70 rounded-full overflow-hidden">
         {(() => {
           // Calculate progress percentage towards next level
           const baseEssence =
-            item.rarity === "COMMON"
-              ? 5
-              : item.rarity === "RARE"
-              ? 25
-              : 200;
+            item.rarity === "COMMON" ? 5 : item.rarity === "RARE" ? 25 : 200;
           const requiredForNextLevel = baseEssence * displayLevel;
           const progressPercent =
             requiredForNextLevel > 0
@@ -86,8 +89,7 @@ export function ProtodermisProgressBar({
                     style={
                       leveledUp
                         ? ({
-                            animation:
-                              "fill-progress 0.6s ease-out forwards",
+                            animation: "fill-progress 0.6s ease-out forwards",
                             animationDelay: "1s",
                             "--progress-width": `${progressPercent}%`,
                             opacity: 0,

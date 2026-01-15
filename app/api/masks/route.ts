@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "../../../lib/store";
+import { masks } from "../../../lib/staticData";
 
 export async function GET() {
   try {
-    return NextResponse.json({ masks: db.masks });
+    return NextResponse.json({ masks });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 400 });

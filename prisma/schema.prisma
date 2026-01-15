@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EquipSlot {
+  NONE
+  TOA
+  TURAGA
+}
+
+model User {
+  id        String   @id // Clerk userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  masks     UserMask[]
+  packs     UserPackProgress[]
+  events    EventRow[]
+}
+
+model UserMask {
+  id            String   @id @default(cuid())
+  userId        String
+  maskId        String
+
+  ownedCount    Int      @default(0)
+  essence       Int      @default(0)
+  level         Int      @default(1)
+  equippedSlot  EquipSlot @default(NONE)
+  unlockedColors String[] @default([])
+  equippedColor String   @default("standard")
+  lastAcquiredAt DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, maskId])
+  @@index([userId])
+}
+
+model UserPackProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  packId         String
+  fractionalUnits Float   @default(0)
+  lastUnitTs     DateTime @default(now())
+  pityCounter    Int      @default(0)
+  lastPackClaimTs DateTime?
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, packId])
+  @@index([userId])
+}
+
+model EventRow {
+  eventId   String   @id
+  userId    String
+  type      String
+  payload   Json
+  timestamp DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+}

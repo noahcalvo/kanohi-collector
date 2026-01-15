@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   buffPercent,
   getBuffDescription,
@@ -36,16 +36,16 @@ function InlineColorRow({
   maskId: string;
 }) {
   return (
-    <div className="flex gap-2 items-center">
+    <div className="flex gap-2 items-center h-6">
       {unlockedColors.map((color) => (
         <button
           key={color}
           onClick={() => onSelectColor(maskId, color)}
           disabled={isChanging}
-          className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
+          className={`w-6 h-6 rounded-full border transition-all hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
             currentColor === color
-              ? "border-slate-900 shadow-md ring-2 ring-slate-900 ring-offset-1"
-              : "border-slate-300 hover:border-slate-500"
+              ? "border-slate-700 shadow-sm"
+              : "border-slate-300 hover:border-slate-400"
           }`}
           style={{ backgroundColor: colorToHex(color) }}
           title={color}
@@ -87,7 +87,7 @@ function LevelEssenceDisplay({
       {level < maxLevel && (
         <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
           <div
-            className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-300"
+            className="bg-gradient-to-r from-slate-600 to-slate-400 h-full transition-all duration-300"
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>
@@ -119,10 +119,10 @@ function ColorSelector({
           key={color}
           onClick={() => onSelectColor(maskId, color)}
           disabled={isChanging}
-          className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
+          className={`w-6 h-6 rounded-full border transition-all hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
             currentColor === color
-              ? "border-slate-900 shadow-md ring-2 ring-slate-900 ring-offset-1"
-              : "border-slate-300 hover:border-slate-500"
+              ? "border-slate-700 shadow-sm"
+              : "border-slate-300 hover:border-slate-400"
           }`}
           style={{ backgroundColor: colorToHex(color) }}
           title={color}
@@ -137,45 +137,31 @@ export function EquippedMaskCard({
   displayName,
   onChangeColor,
   changing,
-  showColorPicker = true,
   rarity,
   transparent,
   buffType,
   description,
+  offsetY,
 }: {
   mask: UserMask;
   displayName: string;
   onChangeColor?: (maskId: string, color: string) => void;
   changing?: string | null;
-  showColorPicker?: boolean;
   rarity: Rarity;
   transparent?: boolean;
   buffType?: string;
   description?: string;
+  offsetY?: number;
 }) {
-  const palette = getAvailableColors(rarity).filter((c) => c !== "standard");
-  const lockedColors = palette.filter((c) => !mask.unlocked_colors.includes(c));
-  const count = lockedColors.length;
-
   return (
     <ArtCard
-      index={0}
-      popoverWidthClass="w-80"
       popover={
-        <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
-          <div className="text-xs text-slate-500 uppercase tracking-wide">
-            Equipped
-          </div>
-          <div className="text-base font-semibold text-slate-900 mt-1">
+        <div className="px-8 pt-0 w-full">
+          <div className="text-base font-semibold text-slate-900">
             {displayName}
           </div>
-          <div className="text-xs text-slate-500 mt-1">{mask.mask_id}</div>
           <div className="text-sm text-slate-700 mt-3">
             Level {mask.level} · Protodermis {mask.essence}
-          </div>
-          <div className="text-sm text-slate-700 mt-3">
-            Owned {mask.owned_count} · Level {mask.level} · Protodermis{" "}
-            {mask.essence}
           </div>
 
           {buffType && (
@@ -189,22 +175,11 @@ export function EquippedMaskCard({
             </div>
           )}
 
-          {description && (
-            <div className="mt-3 pt-3 border-t border-slate-200/70">
-              <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                Description
-              </div>
-              <div className="text-sm text-slate-600 mt-1 italic">
-                &quot;{description}&quot;
-              </div>
+          <div className="mt-4">
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">
+              Select color
             </div>
-          )}
-
-          {showColorPicker && mask.unlocked_colors.length > 0 && (
-            <div className="mt-4">
-              <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">
-                Select color
-              </div>
+            {mask.unlocked_colors.length > 0 ? (
               <ColorSelector
                 colors={mask.unlocked_colors}
                 currentColor={mask.equipped_color}
@@ -212,8 +187,12 @@ export function EquippedMaskCard({
                 isChanging={changing === mask.mask_id}
                 maskId={mask.mask_id}
               />
-            </div>
-          )}
+            ) : (
+              <div className="text-xs text-slate-500">
+                No colors unlocked yet
+              </div>
+            )}
+          </div>
         </div>
       }
     >
@@ -226,7 +205,8 @@ export function EquippedMaskCard({
           alt={displayName}
           color={mask.equipped_color}
           transparent={transparent}
-          maskOffsetY={-10}
+          maskOffsetY={offsetY}
+          showBaseHead={true}
         />
       </div>
       <div className="mt-3 px-2">
@@ -236,27 +216,6 @@ export function EquippedMaskCard({
           rarity={rarity}
         />
       </div>
-      {count > 0 && (
-        <div className="relative h-6 cursor-default text-slate-400">
-          +{count}
-        </div>
-      )}
-
-      {showColorPicker && (
-        <div className="mt-3 flex justify-center">
-          {mask.unlocked_colors.length > 0 ? (
-            <ColorSelector
-              colors={mask.unlocked_colors}
-              currentColor={mask.equipped_color}
-              onSelectColor={onChangeColor || (() => {})}
-              isChanging={changing === mask.mask_id}
-              maskId={mask.mask_id}
-            />
-          ) : (
-            <div className="h-6" />
-          )}
-        </div>
-      )}
     </ArtCard>
   );
 }
@@ -269,7 +228,6 @@ export function CollectionMaskCard({
   changing,
   currentToaEquipped,
   currentTuragaEquipped,
-  index,
 }: {
   mask: CollectionMask;
   onEquip: (
@@ -286,14 +244,15 @@ export function CollectionMaskCard({
     name: string;
     color?: string;
     transparent?: boolean;
+    offsetY?: number;
   } | null;
   currentTuragaEquipped?: {
     maskId: string;
     name: string;
     color?: string;
     transparent?: boolean;
+    offsetY?: number;
   } | null;
-  index: number;
 }) {
   const [showEquipPopup, setShowEquipPopup] = useState(false);
 
@@ -306,20 +265,11 @@ export function CollectionMaskCard({
           </div>
         ) : null
       }
-      popoverWidthClass="w-80"
-      index={index}
       popover={
-        <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
-          <div className="text-xs text-slate-500 uppercase tracking-wide">
-            {mask.rarity}
-          </div>
-          <div className="text-base font-semibold text-slate-900 mt-1">
+        <div className="bg-white/90 rounded-2xl px-8 pt-8 backdrop-blur-sm w-full">
+          <div className="text-base font-semibold text-slate-900">
             {mask.name}
           </div>
-          <div className="text-sm text-slate-700 mt-3">
-            Owned: {mask.owned_count}
-          </div>
-
           <div className="mt-3 pt-3 border-t border-slate-200/70">
             <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
               Buff: {mask.buff_type.replace("_", " ")}
@@ -333,12 +283,12 @@ export function CollectionMaskCard({
             <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
               Description
             </div>
-            <div className="text-sm text-slate-600 mt-1 italic">
+            <div className="text-xs text-slate-600 mt-1 italic">
               &quot;{mask.description}&quot;
             </div>
-            <div className="text-sm text-slate-600">
+            <div className="text-xs text-slate-600 mt-1">
               Originally worn by{" "}
-              <span className="text-sm text-slate-600 italic">
+              <span className="text-xs text-slate-600 italic">
                 {mask.origin}
               </span>
             </div>
@@ -352,7 +302,7 @@ export function CollectionMaskCard({
           alt={mask.name}
           color={(mask as any).equipped_color || mask.unlocked_colors[0]}
           transparent={mask.transparent}
-          showBaseHead={false}
+          maskOffsetY={mask.offsetY}
         />
       </div>
       <div className="mt-3 px-3">
@@ -391,6 +341,7 @@ export function CollectionMaskCard({
                 name: mask.name,
                 color: (mask as any).equipped_color || mask.unlocked_colors[0],
                 transparent: mask.transparent,
+                offsetY: mask.offsetY,
               } as DrawResultItem
             }
             equipping={equipping}

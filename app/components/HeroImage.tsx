@@ -18,7 +18,7 @@ export function HeroImage({
   color,
   transparent,
   maskOffsetY = 0,
-  showBaseHead = true,
+  showBaseHead = false,
 }: {
   maskId: string;
   alt: string;

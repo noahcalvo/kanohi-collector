@@ -1,37 +1,26 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 export function ArtCard({
   badge,
   popover,
   children,
   visible = true,
-  popoverWidthClass = "w-80",
-  index,
 }: {
   badge?: ReactNode;
   popover: ReactNode;
   children: ReactNode;
   visible?: boolean;
-  popoverWidthClass?: string;
-  index: number;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  const positionClasses =
-    index < 1
-      ? "top-full mt-3"
-      : index < 3
-      ? "bottom-full md:top-full md:mt-3"
-      : "bottom-full mb-3";
 
   return (
     <div
       ref={cardRef}
       className={
-        "relative z-0 hover:z-50 focus-within:z-50 transition-all duration-500 ease-out " +
+        "relative h-full z-0 hover:z-50 focus-within:z-50 transition-all duration-500 ease-out " +
         (visible
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-2 pointer-events-none")
@@ -39,22 +28,18 @@ export function ArtCard({
     >
       <div
         tabIndex={0}
-        className="group relative z-0 hover:z-50 focus-within:z-50 rounded-3xl p-5 bg-white/60 shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:-translate-y-0.5 focus-within:shadow-md focus-within:-translate-y-0.5"
+        className="group relative h-full z-0 hover:z-50 focus-within:z-50 rounded-3xl p-5 bg-white/60 shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:-translate-y-0.5 focus-within:shadow-md focus-within:-translate-y-0.5"
       >
         {badge}
         {children}
 
         <div
           ref={popoverRef}
-          className={
-            "absolute left-1/2 " +
-            positionClasses +
-            " " +
-            popoverWidthClass +
-            " -translate-x-1/2 opacity-0 scale-95 pointer-events-none transition-all duration-200 ease-out group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:scale-100 group-focus-within:pointer-events-auto z-[100]"
-          }
+          className="absolute top-0 left-0 right-0 opacity-0 pointer-events-none transition-all duration-200 ease-out group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto z-[100] rounded-t-3xl overflow-hidden flex items-center justify-center h-56 md:h-[240px] overflow-y-auto bg-white/90 rounded-3xl backdrop-blur-sm"
         >
-          {popover}
+          <div className="w-full flex items-center justify-center">
+            {popover}
+          </div>
         </div>
       </div>
     </div>

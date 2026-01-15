@@ -17,6 +17,7 @@ const COLOR_HEX_MAP: Record<string, string> = {
   "light gray": "#c9c9c9",
   "dark gray": "#63635F",
   tan: "#dbb686",
+  gold: "#b8860b",
 };
 
 /** Normalize and return canonical hex; passthrough if already hex */

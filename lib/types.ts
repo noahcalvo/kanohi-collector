@@ -83,6 +83,7 @@ export interface EventRow {
 export interface DrawResultItem {
   mask_id: string;
   name: string;
+  offsetY?: number;
   rarity: Rarity;
   color: string;
   is_new: boolean;
@@ -117,6 +118,7 @@ export interface CollectionMask {
   buff_type: BuffType;
   description: string;
   origin: string;
+  offsetY?: number;
 }
 
 export interface MePayload {
@@ -127,6 +129,7 @@ export interface MePayload {
   fractional_units: number;
   unlocked_colors: Record<string, string[]>;
   collection: CollectionMask[];
+  color_availability: Record<string, { owned: number; available: number }>;
 }
 
 export interface StatusPayload {

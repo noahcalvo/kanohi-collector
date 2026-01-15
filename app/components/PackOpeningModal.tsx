@@ -2,9 +2,8 @@
 
 import Image from "next/image";
 import { useEffect } from "react";
-import type { ReactNode } from "react";
 import { colorToHex } from "../../lib/colors";
-import type { DrawResultItem, EquipSlot, OpenResult } from "../../lib/types";
+import type { EquipSlot, OpenResult } from "../../lib/types";
 import { PackRevealCard } from "./PackRevealCard";
 
 export type PackOverlayStage =
