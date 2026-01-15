@@ -291,7 +291,9 @@ export async function openPack(
   }
 
   const userMasks = await store.getUserMasks(userId);
-  const userMaskByMaskId = new Map(userMasks.map((m) => [m.mask_id, m] as const));
+  const userMaskByMaskId = new Map(
+    userMasks.map((m) => [m.mask_id, m] as const)
+  );
   const ownedMaskIds = new Set(
     userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id)
   );
@@ -431,8 +433,18 @@ export async function packStatus(
   packId: string,
   store: GameStore = prismaStore
 ) {
-  const progress = await store.getUserPackProgress(userId, packId);
-  if (!progress) throw new Error("Pack progress missing");
+  let progress = await store.getUserPackProgress(userId, packId);
+  if (!progress) {
+    progress = {
+      user_id: userId,
+      pack_id: packId,
+      fractional_units: PACK_UNITS_PER_PACK,
+      last_unit_ts: new Date(),
+      pity_counter: 0,
+      last_pack_claim_ts: null,
+    };
+    await store.upsertUserPackProgress(progress);
+  }
   const buffs = await computeBuffs(userId, store);
   const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
   await store.upsertUserPackProgress(refreshed);
@@ -468,12 +480,25 @@ export async function packStatus(
   };
 }
 
-export async function mePayload(userId: string, store: GameStore = prismaStore) {
+export async function mePayload(
+  userId: string,
+  store: GameStore = prismaStore
+) {
   const user = await store.getOrCreateUser(userId);
   if (!user) throw new Error("User not found");
   const buffs = await computeBuffs(userId, store);
-  const progress = await store.getUserPackProgress(userId, "free_daily_v1");
-  if (!progress) throw new Error("Pack progress missing");
+  let progress = await store.getUserPackProgress(userId, "free_daily_v1");
+  if (!progress) {
+    progress = {
+      user_id: userId,
+      pack_id: "free_daily_v1",
+      fractional_units: PACK_UNITS_PER_PACK,
+      last_unit_ts: new Date(),
+      pity_counter: 0,
+      last_pack_claim_ts: null,
+    };
+    await store.upsertUserPackProgress(progress);
+  }
   const status = await packStatus(userId, "free_daily_v1", store);
   const userMasks = await store.getUserMasks(userId);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
