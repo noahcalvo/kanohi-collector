@@ -433,6 +433,7 @@ export async function packStatus(
   packId: string,
   store: GameStore = prismaStore
 ) {
+  await store.getOrCreateUser(userId);
   let progress = await store.getUserPackProgress(userId, packId);
   if (!progress) {
     progress = {
@@ -486,6 +487,8 @@ export async function mePayload(
 ) {
   const user = await store.getOrCreateUser(userId);
   if (!user) throw new Error("User not found");
+  // Ensure user exists before upserting pack progress
+  await store.getOrCreateUser(userId);
   const buffs = await computeBuffs(userId, store);
   let progress = await store.getUserPackProgress(userId, "free_daily_v1");
   if (!progress) {
