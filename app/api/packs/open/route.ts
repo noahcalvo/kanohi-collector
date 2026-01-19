@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserIdOrThrow } from "../../../../lib/auth";
+import { getUserIdAllowGuest } from "../../../../lib/auth";
 import { openPack } from "../../../../lib/engine";
 
 const schema = z.object({
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log("[packs/open] Request body:", body);
     const parsed = schema.parse(body);
-    const userId = await getUserIdOrThrow();
+    const { userId, isGuest } = await getUserIdAllowGuest();
     const now = Date.now();
     const cacheKey = `${userId}:${parsed.client_request_id}`;
     const cached = recent.get(cacheKey);
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (parsed.pack_id !== "free_daily_v1") {
       return NextResponse.json({ error: "Unknown pack" }, { status: 400 });
     }
-    const result = await openPack(userId, parsed.pack_id);
+    const result = await openPack(isGuest, userId, parsed.pack_id);
     recent.set(cacheKey, {
       result,
       expires: now + IDEMPOTENCY_TTL_MS,

@@ -14,7 +14,7 @@ export function GenerationSection({
   onEquip,
   equipping,
   onChangeColor,
-  changing,
+  maskColors,
   currentToaEquipped,
   currentTuragaEquipped,
 }: {
@@ -33,7 +33,7 @@ export function GenerationSection({
   ) => void;
   equipping: string | null;
   onChangeColor: (maskId: string, color: string) => void;
-  changing: string | null;
+  maskColors: Record<string, string>;
   currentToaEquipped?: {
     maskId: string;
     name: string;
@@ -121,7 +121,7 @@ export function GenerationSection({
                         onEquip={onEquip}
                         equipping={equipping}
                         onChangeColor={onChangeColor}
-                        changing={changing}
+                        selectedColor={maskColors[m.mask_id]}
                         currentToaEquipped={currentToaEquipped}
                         currentTuragaEquipped={currentTuragaEquipped}
                       />

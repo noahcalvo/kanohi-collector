@@ -4,7 +4,12 @@ import { prisma } from "../db/prisma";
 import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 import type { GameStore } from "./gameStore";
 
-function toUser(u: { id: string; createdAt: Date; updatedAt: Date }): User {
+function toUser(u: {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  clerkId?: string | null;
+}): User {
   return {
     id: u.id,
     username: u.id,
@@ -12,6 +17,7 @@ function toUser(u: { id: string; createdAt: Date; updatedAt: Date }): User {
     last_active_at: u.updatedAt,
     settings: {},
     created_from_guest: false,
+    clerk_id: u.clerkId ?? null,
   };
 }
 
@@ -42,18 +48,31 @@ function toUserPackProgress(row: any): UserPackProgress {
 }
 
 export const prismaStore: GameStore = {
-  async getOrCreateUser(userId: string): Promise<User> {
-    const user = await prisma.user.upsert({
-      where: { id: userId },
-      create: { id: userId },
-      update: {},
-    });
+  async getOrCreateUser(guest: boolean, id: string): Promise<User> {
+    let user;
+    if (guest) {
+      user = await prisma.user.upsert({
+        where: { id: id },
+        create: { id: id },
+        update: {},
+      });
+    } else {
+      user = await prisma.user.findFirst({
+        where: { clerkId: id },
+      });
+    }
+    if (!user) {
+      throw new Error("Non-guest user not found with id " + id);
+    }
+    console.log(
+      `[prismaStore] getOrCreateUser: guest=${guest} userId=${id} -> id=${user.id}`,
+    );
 
     // Ensure the default pack progress exists so new users can play immediately.
     await prisma.userPackProgress.upsert({
-      where: { userId_packId: { userId, packId: "free_daily_v1" } },
+      where: { userId_packId: { userId: user.id, packId: "free_daily_v1" } },
       create: {
-        userId,
+        userId: user.id,
         packId: "free_daily_v1",
         fractionalUnits: PACK_UNITS_PER_PACK,
         pityCounter: 0,
@@ -65,9 +84,9 @@ export const prismaStore: GameStore = {
 
     // Ensure a starter mask so the UI isn't empty.
     await prisma.userMask.upsert({
-      where: { userId_maskId: { userId, maskId: "1" } },
+      where: { userId_maskId: { userId: user.id, maskId: "1" } },
       create: {
-        userId,
+        userId: user.id,
         maskId: "1",
         ownedCount: 1,
         essence: 0,
@@ -85,7 +104,7 @@ export const prismaStore: GameStore = {
 
   async getUserMask(
     userId: string,
-    maskId: string
+    maskId: string,
   ): Promise<UserMask | undefined> {
     const row = await prisma.userMask.findUnique({
       where: { userId_maskId: { userId, maskId } },
@@ -129,7 +148,7 @@ export const prismaStore: GameStore = {
 
   async getUserPackProgress(
     userId: string,
-    packId: string
+    packId: string,
   ): Promise<UserPackProgress | undefined> {
     const row = await prisma.userPackProgress.findUnique({
       where: { userId_packId: { userId, packId } },

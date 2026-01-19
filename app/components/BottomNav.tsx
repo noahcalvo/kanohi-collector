@@ -1,6 +1,12 @@
 "use client";
 
-import { Home, Package, Users, ShoppingBag } from "lucide-react";
+import {
+  Home,
+  Package,
+  Users,
+  ShoppingBag,
+  Settings as SettingsIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -39,6 +45,18 @@ export function BottomNav() {
           </Link>
         );
       })}
+      <Link
+        href="/settings"
+        aria-label="Settings"
+        className={
+          "flex-1 text-center px-4 py-2 rounded-full text-sm font-semibold shadow-sm transition ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 " +
+          (pathname === "/settings"
+            ? "bg-slate-900/90 text-white"
+            : "bg-white/70 text-slate-900 border border-slate-200/70 hover:bg-white/80")
+        }
+      >
+        <SettingsIcon className="block w-5 h-5 mx-auto" />
+      </Link>
     </nav>
   );
 }

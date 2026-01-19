@@ -15,7 +15,15 @@ import { computeBuffs } from "./buffs";
 import type { GameStore } from "./store/gameStore";
 import { prismaStore } from "./store/prismaStore";
 import { masks as maskDefs, packs as packDefs } from "./staticData";
-import type { CollectionMask, DrawResultItem, Mask, OpenResult, Rarity, UserMask, EquipSlot } from "./types";
+import type {
+  CollectionMask,
+  DrawResultItem,
+  Mask,
+  OpenResult,
+  Rarity,
+  UserMask,
+  EquipSlot,
+} from "./types";
 import { warn } from "console";
 
 const db = {
@@ -28,7 +36,7 @@ function nowSeconds(): number {
 }
 
 function refreshFractionalUnits<
-  T extends { fractional_units: number; last_unit_ts: Date }
+  T extends { fractional_units: number; last_unit_ts: Date },
 >(progress: T, timerSpeedBonus: number): T {
   if (PACK_UNIT_SECONDS <= 0) {
     progress.fractional_units = PACK_UNITS_PER_PACK;
@@ -45,7 +53,7 @@ function refreshFractionalUnits<
   if (unitsGained > 0) {
     progress.fractional_units = Math.min(
       progress.fractional_units + unitsGained,
-      PACK_UNITS_PER_PACK
+      PACK_UNITS_PER_PACK,
     );
     // Set last_unit_ts to the time when the most recent unit was earned
     const newTimestampSeconds =
@@ -75,7 +83,7 @@ function seededRandom(seed: string): () => number {
 function weightedSample<T>(
   items: T[],
   weights: number[],
-  rand: () => number
+  rand: () => number,
 ): T {
   const total = weights.reduce((a, b) => a + b, 0);
   const r = rand() * total;
@@ -150,15 +158,15 @@ export function getAvailableColors(rarity: Rarity, setId: number): string[] {
 function sampleColor(
   def: Mask,
   unlockedColors: string[],
-  rand: () => number
+  rand: () => number,
 ): string {
   // Get available colors based on rarity
   const allNonStandardColors = getAvailableColors(
     def.base_rarity,
-    def.generation
+    def.generation,
   ).filter((c) => c !== "standard");
   const remainingColors = allNonStandardColors.filter(
-    (c) => !unlockedColors.includes(c)
+    (c) => !unlockedColors.includes(c),
   );
 
   if (remainingColors.length === 0) {
@@ -187,16 +195,16 @@ function sampleMaskByRarity(
   rarity: Rarity,
   rand: () => number,
   exclude: Set<string>,
-  ownedMaskIds: ReadonlySet<string>
+  ownedMaskIds: ReadonlySet<string>,
 ): Mask {
   const candidates = db.masks.filter(
-    (m) => m.base_rarity === rarity && !exclude.has(m.mask_id)
+    (m) => m.base_rarity === rarity && !exclude.has(m.mask_id),
   );
   if (candidates.length === 0) {
     throw new Error("No masks available for rarity");
   }
   const weights = candidates.map((m) =>
-    ownedMaskIds.has(m.mask_id) ? 0.2 : 1
+    ownedMaskIds.has(m.mask_id) ? 0.2 : 1,
   );
   return weightedSample(candidates, weights, rand);
 }
@@ -205,14 +213,14 @@ function trySampleMaskByRarity(
   rarity: Rarity,
   rand: () => number,
   exclude: Set<string>,
-  ownedMaskIds: ReadonlySet<string>
+  ownedMaskIds: ReadonlySet<string>,
 ): Mask | null {
   const candidates = db.masks.filter(
-    (m) => m.base_rarity === rarity && !exclude.has(m.mask_id)
+    (m) => m.base_rarity === rarity && !exclude.has(m.mask_id),
   );
   if (candidates.length === 0) return null;
   const weights = candidates.map((m) =>
-    ownedMaskIds.has(m.mask_id) ? 0.2 : 1
+    ownedMaskIds.has(m.mask_id) ? 0.2 : 1,
   );
   return weightedSample(candidates, weights, rand);
 }
@@ -220,7 +228,7 @@ function trySampleMaskByRarity(
 function ensureUserMaskLocal(
   userId: string,
   maskId: string,
-  userMaskByMaskId: Map<string, UserMask>
+  userMaskByMaskId: Map<string, UserMask>,
 ): UserMask {
   const existing = userMaskByMaskId.get(maskId);
   if (existing) return existing;
@@ -260,7 +268,7 @@ function discoveryReroll(
   rand: () => number,
   discoveryBonus: number,
   currentMask: Mask,
-  ownedMaskIds: ReadonlySet<string>
+  ownedMaskIds: ReadonlySet<string>,
 ): Mask {
   if (!discoveryBonus) return currentMask;
   let selected = currentMask;
@@ -272,7 +280,7 @@ function discoveryReroll(
       rarity,
       rand,
       exclude,
-      ownedMaskIds
+      ownedMaskIds,
     );
     if (!candidate) break;
     if (!ownedMaskIds.has(candidate.mask_id)) {
@@ -285,19 +293,20 @@ function discoveryReroll(
 }
 
 export async function openPack(
+  guest: boolean,
   userId: string,
   packId: string,
   opts?: { seed?: string },
-  store: GameStore = prismaStore
+  store: GameStore = prismaStore,
 ): Promise<OpenResult> {
-  await store.getOrCreateUser(userId);
+  await store.getOrCreateUser(guest, userId);
   const pack = db.packs.find((p) => p.pack_id === packId);
   if (!pack) throw new Error("Pack not found");
 
   let progress = await store.getUserPackProgress(userId, packId);
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`
+      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`,
     );
     progress = {
       user_id: userId,
@@ -312,10 +321,10 @@ export async function openPack(
 
   const userMasks = await store.getUserMasks(userId);
   const userMaskByMaskId = new Map(
-    userMasks.map((m) => [m.mask_id, m] as const)
+    userMasks.map((m) => [m.mask_id, m] as const),
   );
   const ownedMaskIds = new Set(
-    userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id)
+    userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id),
   );
 
   const buffs = await computeBuffs(userId, store);
@@ -449,19 +458,20 @@ export async function openPack(
 }
 
 export async function packStatus(
+  guest: boolean,
   userId: string,
   packId: string,
-  store: GameStore = prismaStore
+  store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(userId);
+  await store.getOrCreateUser(guest, userId);
   let progress = await store.getUserPackProgress(userId, packId);
   warn(
     `[packStatus] DB progress for user ${userId}, pack ${packId}:`,
-    progress
+    progress,
   );
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`
+      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`,
     );
     progress = {
       user_id: userId,
@@ -488,21 +498,21 @@ export async function packStatus(
   }
 
   const timeSince = Math.floor(
-    (Date.now() - refreshed.last_unit_ts.getTime()) / 1000
+    (Date.now() - refreshed.last_unit_ts.getTime()) / 1000,
   );
   const speedMultiplier = 1 + buffs.timer_speed;
   const unitsGained = (timeSince * speedMultiplier) / PACK_UNIT_SECONDS;
   const unitsNeeded = Math.max(
     PACK_UNITS_PER_PACK - refreshed.fractional_units,
-    0
+    0,
   );
   const timeToReady =
     Math.max(
       Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
-      0
+      0,
     ) - timeSince;
   warn(
-    `[packStatus] Calculated: timeSince=${timeSince}, speedMultiplier=${speedMultiplier}, unitsGained=${unitsGained}, unitsNeeded=${unitsNeeded}, timeToReady=${timeToReady}`
+    `[packStatus] Calculated: timeSince=${timeSince}, speedMultiplier=${speedMultiplier}, unitsGained=${unitsGained}, unitsNeeded=${unitsNeeded}, timeToReady=${timeToReady}`,
   );
   const result = {
     pack_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK,
@@ -516,18 +526,19 @@ export async function packStatus(
 }
 
 export async function mePayload(
+  guest: boolean,
   userId: string,
-  store: GameStore = prismaStore
+  store: GameStore = prismaStore,
 ) {
-  const user = await store.getOrCreateUser(userId);
+  const user = await store.getOrCreateUser(guest, userId);
   if (!user) throw new Error("User not found");
   // Ensure user exists before upserting pack progress
-  await store.getOrCreateUser(userId);
+  await store.getOrCreateUser(guest, userId);
   const buffs = await computeBuffs(userId, store);
   let progress = await store.getUserPackProgress(userId, "free_daily_v1");
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack free_daily_v1, initializing`
+      `packStatus: no progress found for user ${userId} and pack free_daily_v1, initializing`,
     );
     progress = {
       user_id: userId,
@@ -539,7 +550,7 @@ export async function mePayload(
     };
     await store.upsertUserPackProgress(progress);
   }
-  const status = await packStatus(userId, "free_daily_v1", store);
+  const status = await packStatus(guest, userId, "free_daily_v1", store);
   const userMasks = await store.getUserMasks(userId);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const unlockedColors: Record<string, string[]> = {};
@@ -581,7 +592,7 @@ export async function mePayload(
 }
 
 function calculateColorAvailability(
-  userMasks: UserMask[]
+  userMasks: UserMask[],
 ): Record<string, { owned: number; available: number }> {
   const colorStats: Record<string, { owned: number; available: number }> = {};
 
@@ -618,12 +629,13 @@ function calculateColorAvailability(
 }
 
 export async function equipMask(
+  guest: boolean,
   userId: string,
   maskId: string,
   slot: EquipSlot,
-  store: GameStore = prismaStore
+  store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(userId);
+  await store.getOrCreateUser(guest, userId);
   const target = await store.getUserMask(userId, maskId);
   if (!target) throw new Error("User does not own mask");
 
@@ -635,7 +647,7 @@ export async function equipMask(
         .filter((m) => m.equipped_slot === slot && m.mask_id !== maskId)
         .map(async (m) => {
           await store.upsertUserMask({ ...m, equipped_slot: "NONE" });
-        })
+        }),
     );
   }
 
@@ -652,12 +664,13 @@ export async function equipMask(
 }
 
 export async function setMaskColor(
+  guest: boolean,
   userId: string,
   maskId: string,
   color: string,
-  store: GameStore = prismaStore
+  store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(userId);
+  await store.getOrCreateUser(guest, userId);
   const target = await store.getUserMask(userId, maskId);
   if (!target) throw new Error("User does not own mask");
 
@@ -686,4 +699,3 @@ export async function setMaskColor(
   });
   return target;
 }
-

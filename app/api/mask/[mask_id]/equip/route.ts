@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserIdOrThrow } from "../../../../../lib/auth";
+import { getUserIdAllowGuest } from "../../../../../lib/auth";
 import { equipMask } from "../../../../../lib/engine";
 
 const schema = z.object({ slot: z.enum(["TOA", "TURAGA", "NONE"]) });
@@ -12,8 +12,13 @@ export async function POST(
   try {
     const body = await request.json();
     const parsed = schema.parse(body);
-    const userId = await getUserIdOrThrow();
-    const updated = await equipMask(userId, params.mask_id, parsed.slot);
+    const { userId, isGuest } = await getUserIdAllowGuest();
+    const updated = await equipMask(
+      isGuest,
+      userId,
+      params.mask_id,
+      parsed.slot,
+    );
     return NextResponse.json({
       mask_id: updated.mask_id,
       slot: updated.equipped_slot,

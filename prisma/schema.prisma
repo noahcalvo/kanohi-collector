@@ -15,6 +15,7 @@ enum EquipSlot {
 
 model User {
   id        String   @id // Clerk userId
+  clerkId   String?  // New field for Clerk ID
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

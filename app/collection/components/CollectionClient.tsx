@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import type { CollectionMask, EquipSlot, Rarity, Mask, MePayload } from "../../../lib/types";
 
-import { useColorPicker } from "../../hooks/useColorPicker";
 import { useEquipMask } from "../../hooks/useEquipMask";
 import { useMe } from "../../hooks/useMe";
 import { CollectionStats } from "./CollectionStats";
@@ -15,7 +14,10 @@ interface CollectionClientProps {
   allMasks: Mask[];
 }
 
-export function CollectionClient({ initialMe, allMasks }: CollectionClientProps) {
+export function CollectionClient({
+  initialMe,
+  allMasks,
+}: CollectionClientProps) {
   // Use the hook to get real-time updates, but start with server data
   const { me, refreshMe } = useMe();
   const currentMe = me ?? initialMe;
@@ -23,11 +25,15 @@ export function CollectionClient({ initialMe, allMasks }: CollectionClientProps)
   const { equip, equipping, equipError, clearEquipError } = useEquipMask({
     refreshMe,
   });
-  const { changeColor, changing, changeError, clearChangeError } =
-    useColorPicker({ refreshMe });
+
+  // Local state for mask color selection (client-side only)
+  // Map of maskId to selected color
+  const [maskColors, setMaskColors] = useState<Record<string, string>>({});
+
+  // Optionally, track which color picker is open, or expose a handler to update color
 
   const [expandedGenerations, setExpandedGenerations] = useState<Set<number>>(
-    new Set([])
+    new Set([]),
   );
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
 
@@ -43,25 +49,30 @@ export function CollectionClient({ initialMe, allMasks }: CollectionClientProps)
     });
   };
 
+  // Handler to update color locally (no API call)
+  const handleColorChange = (maskId: string, color: string) => {
+    setMaskColors((prev) => ({ ...prev, [maskId]: color }));
+  };
+
+  // When equipping, use the locally selected color (if any)
   const equipAndClear = async (
     maskId: string,
     slot: EquipSlot,
     color?: string,
-    transparent?: boolean
+    transparent?: boolean,
   ) => {
     clearEquipError();
-    await equip(maskId, slot, color, transparent);
-  };
-
-  const changeColorAndClear = async (maskId: string, color: string) => {
-    clearChangeError();
-    await changeColor(maskId, color);
+    // Use the locally selected color if not provided
+    const selectedColor = color ?? maskColors[maskId];
+    await equip(maskId, slot, selectedColor, transparent);
   };
 
   const maskNameById = useMemo(
     () =>
-      new Map(currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? []),
-    [currentMe?.collection]
+      new Map(
+        currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? [],
+      ),
+    [currentMe?.collection],
   );
 
   const currentToaEquipped = useMemo(() => {
@@ -71,22 +82,26 @@ export function CollectionClient({ initialMe, allMasks }: CollectionClientProps)
       maskId: equipped.mask_id,
       name: maskNameById.get(equipped.mask_id) ?? equipped.mask_id,
       color: equipped.equipped_color,
-      transparent: currentMe?.collection.find((c) => c.mask_id === equipped.mask_id)
-        ?.transparent,
+      transparent: currentMe?.collection.find(
+        (c) => c.mask_id === equipped.mask_id,
+      )?.transparent,
       offsetY: currentMe?.collection.find((c) => c.mask_id === equipped.mask_id)
         ?.offsetY,
     };
   }, [currentMe?.equipped, currentMe?.collection, maskNameById]);
 
   const currentTuragaEquipped = useMemo(() => {
-    const equipped = currentMe?.equipped.find((e) => e.equipped_slot === "TURAGA");
+    const equipped = currentMe?.equipped.find(
+      (e) => e.equipped_slot === "TURAGA",
+    );
     if (!equipped) return null;
     return {
       maskId: equipped.mask_id,
       name: maskNameById.get(equipped.mask_id) ?? equipped.mask_id,
       color: equipped.equipped_color,
-      transparent: currentMe?.collection.find((c) => c.mask_id === equipped.mask_id)
-        ?.transparent,
+      transparent: currentMe?.collection.find(
+        (c) => c.mask_id === equipped.mask_id,
+      )?.transparent,
       offsetY: currentMe?.collection.find((c) => c.mask_id === equipped.mask_id)
         ?.offsetY,
     };
@@ -156,8 +171,9 @@ export function CollectionClient({ initialMe, allMasks }: CollectionClientProps)
                   maskNameById={maskNameById}
                   onEquip={equipAndClear}
                   equipping={equipping}
-                  onChangeColor={changeColorAndClear}
-                  changing={changing}
+                  // Pass local color state and handler to children
+                  maskColors={maskColors}
+                  onChangeColor={handleColorChange}
                   currentToaEquipped={currentToaEquipped}
                   currentTuragaEquipped={currentTuragaEquipped}
                 />
@@ -169,9 +185,7 @@ export function CollectionClient({ initialMe, allMasks }: CollectionClientProps)
         )}
       </section>
 
-      {(equipError || changeError) && (
-        <p className="text-rose-700 text-sm">{equipError || changeError}</p>
-      )}
+      {equipError && <p className="text-rose-700 text-sm">{equipError}</p>}
 
       {currentMe?.collection && (
         <CollectionStats

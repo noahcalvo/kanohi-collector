@@ -19,12 +19,19 @@ import { TimeToReadyCountdown } from "./TimeToReadyCountdown";
 interface HomeClientProps {
   initialStatus: StatusPayload;
   initialMe: MePayload;
+  isGuest?: boolean;
 }
 
-export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
+export function HomeClient({
+  initialStatus,
+  initialMe,
+  isGuest,
+}: HomeClientProps) {
   // Use hooks for real-time updates, but start with server data
   const { status, refreshStatus } = useStatus();
   const { me, refreshMe } = useMe();
+
+  console.log("HomeClient render", { status, me });
 
   const currentStatus = status ?? initialStatus;
   const currentMe = me ?? initialMe;
@@ -72,7 +79,7 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
     maskId: string,
     slot: EquipSlot,
     color?: string,
-    transparent?: boolean
+    transparent?: boolean,
   ) => {
     clearEquipError();
     await equip(maskId, slot, color, transparent);
@@ -86,56 +93,56 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
   const maskNameById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? []
+        currentMe?.collection?.map((m) => [m.mask_id, m.name] as const) ?? [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const maskRarityById = useMemo(
     () =>
       new Map(
-        currentMe?.collection?.map((m) => [m.mask_id, m.rarity] as const) ?? []
+        currentMe?.collection?.map((m) => [m.mask_id, m.rarity] as const) ?? [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const maskTransparentById = useMemo(
     () =>
       new Map(
         currentMe?.collection?.map(
-          (m) => [m.mask_id, m.transparent] as const
-        ) ?? []
+          (m) => [m.mask_id, m.transparent] as const,
+        ) ?? [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const maskBuffTypeById = useMemo(
     () =>
       new Map(
         currentMe?.collection?.map((m) => [m.mask_id, m.buff_type] as const) ??
-          []
+          [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const maskDescriptionById = useMemo(
     () =>
       new Map(
         currentMe?.collection?.map(
-          (m) => [m.mask_id, m.description] as const
-        ) ?? []
+          (m) => [m.mask_id, m.description] as const,
+        ) ?? [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const maskOffsetYById = useMemo(
     () =>
       new Map(
         currentMe?.collection?.map(
-          (m) => [m.mask_id, m.offsetY ?? 0] as const
-        ) ?? []
+          (m) => [m.mask_id, m.offsetY ?? 0] as const,
+        ) ?? [],
       ),
-    [currentMe?.collection]
+    [currentMe?.collection],
   );
 
   const equippedToa =
@@ -178,6 +185,18 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
 
   return (
     <div className="space-y-6">
+      {isGuest && (
+        <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
+          <div className="font-semibold text-lg mb-1">Welcome, Guest!</div>
+          <div className="mb-2 text-sm text-yellow-800 text-balance">
+            Your progress is saved locally. Create an account to save your
+            collection and play across devices.
+          </div>
+          <Link href="/sign-up" className="button-primary mt-2">
+            Create Account
+          </Link>
+        </div>
+      )}
       <PackOpeningModal
         open={packOverlayOpen}
         stage={packOverlayStage}
@@ -245,8 +264,8 @@ export function HomeClient({ initialStatus, initialMe }: HomeClientProps) {
           {opening
             ? "Opening..."
             : currentStatus?.pack_ready
-            ? "Open Pack"
-            : "Not ready"}
+              ? "Open Pack"
+              : "Not ready"}
         </button>
       </section>
 

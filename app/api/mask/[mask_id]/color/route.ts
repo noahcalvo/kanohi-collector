@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserIdOrThrow } from "../../../../../lib/auth";
+import { getUserIdAllowGuest } from "../../../../../lib/auth";
 import { setMaskColor } from "../../../../../lib/engine";
 
 const schema = z.object({ color: z.string() });
@@ -12,7 +12,7 @@ export async function POST(
   try {
     const body = await request.json();
     const parsed = schema.parse(body);
-    const userId = await getUserIdOrThrow();
+    const { userId } = await getUserIdAllowGuest();
     const updated = await setMaskColor(userId, params.mask_id, parsed.color);
     return NextResponse.json({
       mask_id: updated.mask_id,
