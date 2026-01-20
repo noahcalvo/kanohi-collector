@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserIdAllowGuest } from "../../../../../lib/auth";
+import { getUserId } from "../../../../../lib/auth";
 import { setMaskColor } from "../../../../../lib/engine";
 
 const schema = z.object({ color: z.string() });
@@ -12,8 +12,16 @@ export async function POST(
   try {
     const body = await request.json();
     const parsed = schema.parse(body);
-    const { userId } = await getUserIdAllowGuest();
-    const updated = await setMaskColor(userId, params.mask_id, parsed.color);
+    const { userId, isGuest } = await getUserId();
+    if (!userId) {
+      throw new Error("No userId found in set mask color");
+    }
+    const updated = await setMaskColor(
+      isGuest,
+      userId,
+      params.mask_id,
+      parsed.color,
+    );
     return NextResponse.json({
       mask_id: updated.mask_id,
       equipped_color: updated.equipped_color,

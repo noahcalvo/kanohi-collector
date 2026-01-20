@@ -48,9 +48,9 @@ function toUserPackProgress(row: any): UserPackProgress {
 }
 
 export const prismaStore: GameStore = {
-  async getOrCreateUser(guest: boolean, id: string): Promise<User> {
+  async getOrCreateUser(kanohiId: boolean, id: string): Promise<User> {
     let user;
-    if (guest) {
+    if (kanohiId) {
       user = await prisma.user.upsert({
         where: { id: id },
         create: { id: id },
@@ -62,10 +62,10 @@ export const prismaStore: GameStore = {
       });
     }
     if (!user) {
-      throw new Error("Non-guest user not found with id " + id);
+      throw new Error("Non-kanohi user not found with id " + id);
     }
     console.log(
-      `[prismaStore] getOrCreateUser: guest=${guest} userId=${id} -> id=${user.id}`,
+      `[prismaStore] getOrCreateUser: kanohiId=${kanohiId} userId=${id} -> id=${user.id}`,
     );
 
     // Ensure the default pack progress exists so new users can play immediately.
@@ -78,23 +78,6 @@ export const prismaStore: GameStore = {
         pityCounter: 0,
         lastUnitTs: new Date(),
         lastPackClaimTs: null,
-      },
-      update: {},
-    });
-
-    // Ensure a starter mask so the UI isn't empty.
-    await prisma.userMask.upsert({
-      where: { userId_maskId: { userId: user.id, maskId: "1" } },
-      create: {
-        userId: user.id,
-        maskId: "1",
-        ownedCount: 1,
-        essence: 0,
-        level: 1,
-        equippedSlot: "TOA",
-        unlockedColors: ["red"],
-        equippedColor: "red",
-        lastAcquiredAt: new Date(),
       },
       update: {},
     });

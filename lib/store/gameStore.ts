@@ -1,7 +1,7 @@
 import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 
 export type GameStore = {
-  getOrCreateUser: (guest: boolean, userId: string) => Promise<User>;
+  getOrCreateUser: (kanohiId: boolean, userId: string) => Promise<User>;
 
   getUserMask: (
     userId: string,

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getUserIdAllowGuest } from "../lib/auth";
+import { getUserId } from "../lib/auth";
 import { mePayload, packStatus } from "../lib/engine";
 import { Header } from "./components/Header";
 import { HomeClient } from "./components/HomeClient";
@@ -17,10 +17,12 @@ export default function Home() {
 }
 
 async function MainContent() {
-  const { userId, isGuest } = await getUserIdAllowGuest();
+  const { userId, isGuest } = await getUserId();
+  if (!userId) {
+    throw new Error("No userId found in MainContent");
+  }
   const initialStatus = await packStatus(isGuest, userId, "free_daily_v1");
   const initialMe = await mePayload(isGuest, userId);
-  // Pass isGuest as a prop for UI logic (optional)
   return (
     <HomeClient
       initialStatus={initialStatus}

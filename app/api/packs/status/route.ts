@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { getUserIdAllowGuest } from "../../../../lib/auth";
+import { getUserId } from "../../../../lib/auth";
 import { packStatus } from "../../../../lib/engine";
 
 export async function GET() {
   try {
-    const { userId } = await getUserIdAllowGuest();
-    const status = await packStatus(userId, "free_daily_v1");
+    const { userId, isGuest } = await getUserId();
+    if (!userId) {
+      throw new Error("No userId found in pack status");
+    }
+    const status = await packStatus(isGuest, userId, "free_daily_v1");
     return NextResponse.json(status);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

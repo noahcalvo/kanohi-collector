@@ -11,7 +11,7 @@ export async function getUserIdOrThrow(): Promise<string> {
 // Returns userId if authenticated, otherwise returns a guest id (from cookie or generates one)
 export const GUEST_COOKIE = "kanohi_guest_id";
 
-export async function getUserIdAllowGuest(): Promise<{
+export async function getOrCreateUserId(): Promise<{
   isGuest: boolean;
   userId: string;
   setCookie: boolean;
@@ -21,11 +21,27 @@ export async function getUserIdAllowGuest(): Promise<{
   if (userId) return { userId, isGuest: false, setCookie };
   // Try to get guest id from cookie
   let guestId = cookies().get(GUEST_COOKIE)?.value;
+  console.log("getUserId - guestId from cookie:", guestId);
   if (!guestId) {
     setCookie = true;
     guestId = createNewGuestId();
   }
   return { userId: guestId, isGuest: true, setCookie };
+}
+
+export async function getUserId(): Promise<{
+  userId: string | null;
+  isGuest: boolean;
+}> {
+  const { userId } = await auth();
+  if (userId) return { userId, isGuest: false };
+  // Try to get guest id from cookie
+  const guestId = cookies().get(GUEST_COOKIE)?.value;
+  console.log("getUserId - guestId from cookie:", guestId);
+  if (guestId) {
+    return { userId: guestId, isGuest: true };
+  }
+  return { userId: null, isGuest: false };
 }
 
 // Helper to set guest cookie in a Server Action or Route Handler

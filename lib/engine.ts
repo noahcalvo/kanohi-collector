@@ -299,17 +299,17 @@ export async function openPack(
   opts?: { seed?: string },
   store: GameStore = prismaStore,
 ): Promise<OpenResult> {
-  await store.getOrCreateUser(guest, userId);
+  const user = await store.getOrCreateUser(guest, userId);
   const pack = db.packs.find((p) => p.pack_id === packId);
   if (!pack) throw new Error("Pack not found");
 
-  let progress = await store.getUserPackProgress(userId, packId);
+  let progress = await store.getUserPackProgress(user.id, packId);
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`,
+      `packStatus: no progress found for user ${user.id} and pack ${packId}, initializing`,
     );
     progress = {
-      user_id: userId,
+      user_id: user.id,
       pack_id: packId,
       fractional_units: PACK_UNITS_PER_PACK,
       last_unit_ts: new Date(),
@@ -319,7 +319,7 @@ export async function openPack(
     await store.upsertUserPackProgress(progress);
   }
 
-  const userMasks = await store.getUserMasks(userId);
+  const userMasks = await store.getUserMasks(user.id);
   const userMaskByMaskId = new Map(
     userMasks.map((m) => [m.mask_id, m] as const),
   );
@@ -327,13 +327,13 @@ export async function openPack(
     userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id),
   );
 
-  const buffs = await computeBuffs(userId, store);
+  const buffs = await computeBuffs(user.id, store);
   const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
   if (refreshed.fractional_units < PACK_UNITS_PER_PACK) {
     throw new Error("Pack not ready");
   }
 
-  const seed = opts?.seed ?? `${userId}-${Date.now()}-${GLOBAL_SEED_SALT}`;
+  const seed = opts?.seed ?? `${user.id}-${Date.now()}-${GLOBAL_SEED_SALT}`;
   const rand = seededRandom(seed);
 
   let pityFlag = refreshed.pity_counter >= PITY_THRESHOLD;
@@ -351,7 +351,7 @@ export async function openPack(
     let mask = sampleMaskByRarity(rarity, rand, exclude, ownedMaskIds);
     mask = discoveryReroll(rarity, rand, buffs.discovery, mask, ownedMaskIds);
 
-    let userMask = ensureUserMaskLocal(userId, mask.mask_id, userMaskByMaskId);
+    let userMask = ensureUserMaskLocal(user.id, mask.mask_id, userMaskByMaskId);
     const color =
       mask.base_rarity === "MYTHIC"
         ? mask.original_color
@@ -384,7 +384,7 @@ export async function openPack(
 
     await store.appendEvent({
       event_id: randomUUID(),
-      user_id: userId,
+      user_id: user.id,
       type: "mask_pull",
       payload: {
         mask_id: mask.mask_id,
@@ -448,7 +448,7 @@ export async function openPack(
 
   await store.appendEvent({
     event_id: randomUUID(),
-    user_id: userId,
+    user_id: user.id,
     type: "pack_open",
     payload: { pack_id: pack.pack_id, results },
     timestamp: new Date(),
@@ -463,18 +463,22 @@ export async function packStatus(
   packId: string,
   store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(guest, userId);
-  let progress = await store.getUserPackProgress(userId, packId);
-  warn(
-    `[packStatus] DB progress for user ${userId}, pack ${packId}:`,
-    progress,
+  console.log(
+    "fetching pack status for user:",
+    userId,
+    "pack:",
+    packId,
+    "guest: ",
+    guest,
   );
+  const user = await store.getOrCreateUser(guest, userId);
+  let progress = await store.getUserPackProgress(user.id, packId);
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack ${packId}, initializing`,
+      `packStatus: no progress found for user ${user.id} and pack ${packId}, initializing`,
     );
     progress = {
-      user_id: userId,
+      user_id: user.id,
       pack_id: packId,
       fractional_units: PACK_UNITS_PER_PACK,
       last_unit_ts: new Date(),
@@ -483,9 +487,8 @@ export async function packStatus(
     };
     await store.upsertUserPackProgress(progress);
   }
-  const buffs = await computeBuffs(userId, store);
+  const buffs = await computeBuffs(user.id, store);
   const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
-  warn(`[packStatus] Refreshed progress:`, refreshed);
 
   if (PACK_UNIT_SECONDS <= 0) {
     warn(`[packStatus] Timer disabled, returning ready`);
@@ -526,22 +529,22 @@ export async function packStatus(
 }
 
 export async function mePayload(
-  guest: boolean,
+  kanohiId: boolean,
   userId: string,
   store: GameStore = prismaStore,
 ) {
-  const user = await store.getOrCreateUser(guest, userId);
+  console.log("Generating mePayload for user:", userId, "guest:", kanohiId);
+  const user = await store.getOrCreateUser(kanohiId, userId);
   if (!user) throw new Error("User not found");
   // Ensure user exists before upserting pack progress
-  await store.getOrCreateUser(guest, userId);
-  const buffs = await computeBuffs(userId, store);
-  let progress = await store.getUserPackProgress(userId, "free_daily_v1");
+  const buffs = await computeBuffs(user.id, store);
+  let progress = await store.getUserPackProgress(user.id, "free_daily_v1");
   if (!progress) {
     warn(
-      `packStatus: no progress found for user ${userId} and pack free_daily_v1, initializing`,
+      `packStatus: no progress found for user ${user.id} and pack free_daily_v1, initializing`,
     );
     progress = {
-      user_id: userId,
+      user_id: user.id,
       pack_id: "free_daily_v1",
       fractional_units: PACK_UNITS_PER_PACK,
       last_unit_ts: new Date(),
@@ -550,8 +553,8 @@ export async function mePayload(
     };
     await store.upsertUserPackProgress(progress);
   }
-  const status = await packStatus(guest, userId, "free_daily_v1", store);
-  const userMasks = await store.getUserMasks(userId);
+  const status = await packStatus(true, user.id, "free_daily_v1", store);
+  const userMasks = await store.getUserMasks(user.id);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const unlockedColors: Record<string, string[]> = {};
   userMasks.forEach((m) => {
@@ -635,13 +638,13 @@ export async function equipMask(
   slot: EquipSlot,
   store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(guest, userId);
-  const target = await store.getUserMask(userId, maskId);
+  const user = await store.getOrCreateUser(guest, userId);
+  const target = await store.getUserMask(user.id, maskId);
   if (!target) throw new Error("User does not own mask");
 
   // clear slot occupancy if another mask is there
   if (slot !== "NONE") {
-    const masks = await store.getUserMasks(userId);
+    const masks = await store.getUserMasks(user.id);
     await Promise.all(
       masks
         .filter((m) => m.equipped_slot === slot && m.mask_id !== maskId)
@@ -655,7 +658,7 @@ export async function equipMask(
   await store.upsertUserMask(target);
   await store.appendEvent({
     event_id: randomUUID(),
-    user_id: userId,
+    user_id: user.id,
     type: "equip",
     payload: { mask_id: maskId, slot },
     timestamp: new Date(),
@@ -670,8 +673,8 @@ export async function setMaskColor(
   color: string,
   store: GameStore = prismaStore,
 ) {
-  await store.getOrCreateUser(guest, userId);
-  const target = await store.getUserMask(userId, maskId);
+  const user = await store.getOrCreateUser(guest, userId);
+  const target = await store.getUserMask(user.id, maskId);
   if (!target) throw new Error("User does not own mask");
 
   // Get the mask definition
@@ -692,7 +695,7 @@ export async function setMaskColor(
   await store.upsertUserMask(target);
   await store.appendEvent({
     event_id: randomUUID(),
-    user_id: userId,
+    user_id: user.id,
     type: "color_change",
     payload: { mask_id: maskId, color },
     timestamp: new Date(),

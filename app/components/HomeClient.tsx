@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buffPercent } from "../../lib/clientConstants";
 import type { EquipSlot, MePayload, StatusPayload } from "../../lib/types";
 import { ArtCard } from "../components/ArtCard";
@@ -31,10 +31,32 @@ export function HomeClient({
   const { status, refreshStatus } = useStatus();
   const { me, refreshMe } = useMe();
 
-  console.log("HomeClient render", { status, me });
-
   const currentStatus = status ?? initialStatus;
   const currentMe = me ?? initialMe;
+
+  // Countdown timer state
+  const [seconds, setSeconds] = useState(currentStatus?.time_to_ready ?? 0);
+
+  // Sync timer with status updates
+  useEffect(() => {
+    setSeconds(currentStatus?.time_to_ready ?? 0);
+  }, [currentStatus?.time_to_ready]);
+
+  // Ticking logic
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const interval = setInterval(() => {
+      setSeconds((prev: number) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [seconds]);
+
+  // When countdown hits zero, refresh status to update pack readiness
+  useEffect(() => {
+    if (seconds === 0) {
+      refreshStatus();
+    }
+  }, [seconds, refreshStatus]);
 
   const {
     opening,
@@ -236,20 +258,7 @@ export function HomeClient({
           Pack progress
         </h2>
         {currentStatus ? (
-          <div className="mt-3 space-y-2">
-            <div className="text-sm text-slate-600">
-              {currentStatus.pack_ready ? (
-                "Ready now"
-              ) : (
-                <>
-                  <TimeToReadyCountdown
-                    initialSeconds={currentStatus.time_to_ready}
-                  />
-                  until next pack is ready
-                </>
-              )}
-            </div>
-          </div>
+          <TimeToReadyCountdown seconds={seconds} />
         ) : (
           <p className="text-slate-500 text-sm mt-3">Loading...</p>
         )}
@@ -259,13 +268,9 @@ export function HomeClient({
         <button
           className="button-primary text-lg px-10 py-4"
           onClick={openPack}
-          disabled={!currentStatus?.pack_ready || opening}
+          disabled={seconds > 0 || opening}
         >
-          {opening
-            ? "Opening..."
-            : currentStatus?.pack_ready
-              ? "Open Pack"
-              : "Not ready"}
+          {opening ? "Opening..." : seconds === 0 ? "Open Pack" : "Not ready"}
         </button>
       </section>
 
