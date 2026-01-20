@@ -14,9 +14,7 @@ export default function TutorialPage() {
     let res = await fetch("/api/me", { method: "GET" });
     if (res.ok) {
       const data = await res.json();
-      console.log("Existing guest user data:", data);
       if (data && data.user.id && data.created_from_guest) {
-        // Guest user already exists, just redirect
         router.push("/");
         return;
       }
@@ -24,7 +22,8 @@ export default function TutorialPage() {
     // Otherwise, create a new guest user
     res = await fetch("/api/me?guest=1", { method: "POST" });
     if (res.ok) {
-      router.push("/");
+      // Force a full reload to ensure cookie is sent
+      window.location.href = "/";
     } else {
       alert("Failed to create guest user");
       setLoading(false);
@@ -38,9 +37,15 @@ export default function TutorialPage() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-8">
       <h1 className="text-3xl font-bold mb-4">Welcome to Kanohi Collector!</h1>
-      <p className="mb-6">Start your journey by following the tutorial or sign in to your account.</p>
+      <p className="mb-6">
+        Start your journey by following the tutorial or sign in to your account.
+      </p>
       {/* Add onboarding steps, guest creation, and sign-in options here */}
-      <button className="btn btn-primary mb-2" onClick={handleGuest} disabled={loading}>
+      <button
+        className="btn btn-primary mb-2"
+        onClick={handleGuest}
+        disabled={loading}
+      >
         {loading ? "Loading..." : "Continue as Guest"}
       </button>
       <button className="btn btn-secondary" onClick={handleSignIn}>
