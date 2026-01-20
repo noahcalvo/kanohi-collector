@@ -31,7 +31,6 @@ export interface User {
   last_active_at: Date;
   settings: Record<string, unknown>;
   created_from_guest: boolean;
-  clerk_id: string | null;
 }
 
 export interface UserMask {

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
-import type { GameStore } from "./gameStore";
-import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 import { PACK_UNITS_PER_PACK } from "../constants";
+import type { EventRow, User, UserMask, UserPackProgress } from "../types";
+import type { GameStore } from "./gameStore";
 
 export function createMemoryStore(opts?: {
   seedUserId?: string;
@@ -50,12 +50,12 @@ export function createMemoryStore(opts?: {
   const events: EventRow[] = [];
 
   return {
-    async getOrCreateUser(uid: string) {
-      const existing = users.find((u) => u.id === uid);
+    async getOrCreateUser(kanohiId: boolean, userId: string) {
+      const existing = users.find((u) => u.id === userId);
       if (existing) return existing;
       const created: User = {
-        id: uid,
-        username: uid,
+        id: userId,
+        username: userId,
         created_at: new Date(),
         last_active_at: new Date(),
         settings: {},
@@ -63,7 +63,7 @@ export function createMemoryStore(opts?: {
       };
       users.push(created);
       userPackProgress.push({
-        user_id: uid,
+        user_id: userId,
         pack_id: packId,
         fractional_units: PACK_UNITS_PER_PACK,
         last_unit_ts: new Date(),
@@ -83,7 +83,7 @@ export function createMemoryStore(opts?: {
 
     async upsertUserMask(entry) {
       const idx = userMasks.findIndex(
-        (m) => m.user_id === entry.user_id && m.mask_id === entry.mask_id
+        (m) => m.user_id === entry.user_id && m.mask_id === entry.mask_id,
       );
       if (idx >= 0) {
         userMasks[idx] = { ...entry, id: userMasks[idx].id };
@@ -94,13 +94,13 @@ export function createMemoryStore(opts?: {
 
     async getUserPackProgress(uid, pid) {
       return userPackProgress.find(
-        (p) => p.user_id === uid && p.pack_id === pid
+        (p) => p.user_id === uid && p.pack_id === pid,
       );
     },
 
     async upsertUserPackProgress(progress) {
       const idx = userPackProgress.findIndex(
-        (p) => p.user_id === progress.user_id && p.pack_id === progress.pack_id
+        (p) => p.user_id === progress.user_id && p.pack_id === progress.pack_id,
       );
       if (idx >= 0) userPackProgress[idx] = progress;
       else userPackProgress.push(progress);

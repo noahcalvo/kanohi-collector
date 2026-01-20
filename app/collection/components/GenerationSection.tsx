@@ -14,7 +14,6 @@ export function GenerationSection({
   onEquip,
   equipping,
   onChangeColor,
-  maskColors,
   currentToaEquipped,
   currentTuragaEquipped,
 }: {
@@ -29,7 +28,7 @@ export function GenerationSection({
     maskId: string,
     slot: EquipSlot,
     color?: string,
-    transparent?: boolean
+    transparent?: boolean,
   ) => void;
   equipping: string | null;
   onChangeColor: (maskId: string, color: string) => void;
@@ -51,7 +50,7 @@ export function GenerationSection({
 }) {
   const totalCount = Array.from(genMasks.values()).reduce(
     (sum, masks) => sum + masks.length,
-    0
+    0,
   );
   const totalsByRarity = totalMasksByGenRarity.get(gen);
   const totalAvailableGen = totalsByRarity
@@ -121,7 +120,6 @@ export function GenerationSection({
                         onEquip={onEquip}
                         equipping={equipping}
                         onChangeColor={onChangeColor}
-                        selectedColor={maskColors[m.mask_id]}
                         currentToaEquipped={currentToaEquipped}
                         currentTuragaEquipped={currentTuragaEquipped}
                       />
