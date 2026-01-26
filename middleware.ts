@@ -1,33 +1,28 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/",
-  "/collection(.*)",
-  "/friends(.*)",
-  "/shop(.*)",
-  "/settings(.*)",
-  "/tutorial(.*)",
-]);
+/**
+ * Behavior:
+ * - If there's no Clerk session cookie and no guest cookie, redirect to /tutorial for:
+ *   - Document requests (accept: text/html)
+ *   - Next.js client-side navigations (/_next/data, x-nextjs-data, or accept: application/json)
+ * - For API routes, return a 401 JSON response.
+ * - Always allow /tutorial and the create-account endpoint (/api/me) to pass through.
+ */
 
 const isCreateAccountRoute = createRouteMatcher(["/api/me(.*)"]);
-
 const isTutorialRoute = createRouteMatcher(["/tutorial(.*)"]);
 
-export default clerkMiddleware(async (auth, req) => {
-  const hasClerkKeys =
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-    !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder");
-
-  if (!hasClerkKeys || isTutorialRoute(req) || isCreateAccountRoute(req)) {
+export default clerkMiddleware(async (_auth, req: NextRequest) => {
+  // Allow tutorial and account-creation endpoints (avoid redirect loops / onboarding flow).
+  if (isTutorialRoute(req) || isCreateAccountRoute(req)) {
     return NextResponse.next();
   }
 
-  const cookieHeader = req.headers.get("cookie") || "";
+  const cookieHeader = req.headers.get("cookie") ?? "";
   const hasGuestCookie = cookieHeader.includes("kanohi_guest_id=");
   const hasClerkCookie = cookieHeader.includes("__session=");
+
   console.log(
     "Middleware - hasGuestCookie:",
     hasGuestCookie,
@@ -35,25 +30,38 @@ export default clerkMiddleware(async (auth, req) => {
     hasClerkCookie,
   );
 
+  // If neither guest nor clerk session present, enforce redirect to /tutorial
   if (!hasGuestCookie && !hasClerkCookie) {
     const pathname = req.nextUrl.pathname;
 
-    // If this is an API request, don't "redirect the fetch"
+    // API routes -> JSON 401 (don't redirect fetches)
     if (pathname.startsWith("/api")) {
+      console.log("Middleware - unauthorized API request");
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    // Only redirect actual page navigations (document requests)
-    const accept = req.headers.get("accept") || "";
-    const isDocument = accept.includes("text/html");
+    const accept = (req.headers.get("accept") ?? "").toLowerCase();
 
-    if (isDocument) {
+    // Document navigations (full page loads)
+    const isDocumentRequest = accept.includes("text/html");
+
+    const isClientSideNavigation =
+      req.headers.get("next-url") ||
+      (req.headers.get("referer") ?? req.headers.get("referrer"));
+
+    console.log("Middleware - isClientSideNavigation:", isClientSideNavigation);
+
+    console.log("req ", req);
+
+    if (isDocumentRequest || isClientSideNavigation) {
       return NextResponse.redirect(new URL("/tutorial", req.url));
     }
 
+    // conservative fallback
     return NextResponse.next();
   }
 
+  // has guest or clerk session -> proceed
   return NextResponse.next();
 });
 
