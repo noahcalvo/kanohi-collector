@@ -1,9 +1,9 @@
 import { useMemo } from "react";
+import { colorToHex } from "../../lib/colors";
 import { getAvailableColors } from "../../lib/engine";
 import { masks } from "../../lib/staticData";
 import { type Rarity } from "../../lib/types";
 import { ColoredMask } from "../components/ColoredMask";
-import { colorToHex } from "../../lib/colors";
 
 export default function TestAllMasksPage() {
   const allMasks = useMemo(() => masks, []);

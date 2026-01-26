@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   buffPercent,
   getBuffDescription,
@@ -15,12 +15,6 @@ import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";
 
 // Color utilities centralized in lib/colors
-
-// Available palette by rarity (client-side mirror of engine logic)
-function getAvailableColors(rarity: Rarity): string[] {
-  if (rarity === "MYTHIC") return ["standard"];
-  return ["standard", "red", "blue", "green", "brown", "white", "black"];
-}
 
 function InlineColorRow({
   unlockedColors,
@@ -140,7 +134,6 @@ export function EquippedMaskCard({
   rarity,
   transparent,
   buffType,
-  description,
   offsetY,
 }: {
   mask: UserMask;
@@ -150,7 +143,6 @@ export function EquippedMaskCard({
   rarity: Rarity;
   transparent?: boolean;
   buffType?: string;
-  description?: string;
   offsetY?: number;
 }) {
   return (

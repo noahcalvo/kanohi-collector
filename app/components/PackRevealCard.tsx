@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { uiHex } from "../../lib/colors";
 import type { EquipSlot, DrawResultItem } from "../../lib/types";
 import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";

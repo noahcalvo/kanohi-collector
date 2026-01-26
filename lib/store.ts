@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
 import { PACK_UNITS_PER_PACK, PACK_UNIT_SECONDS } from "./constants";
 import type {
   EventRow,
@@ -9,8 +11,7 @@ import type {
   UserMask,
   UserPackProgress,
 } from "./types";
-import fs from "fs";
-import path from "path";
+
 
 const now = () => new Date();
 
@@ -211,6 +212,7 @@ const usersSeed: User[] = [
     last_active_at: now(),
     settings: {},
     created_from_guest: true,
+    clerk_id: null
   },
 ];
 

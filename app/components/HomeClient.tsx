@@ -292,7 +292,6 @@ export function HomeClient({
                 rarity={maskRarityById.get(equippedToa.mask_id) ?? "COMMON"}
                 transparent={maskTransparentById.get(equippedToa.mask_id)}
                 buffType={maskBuffTypeById.get(equippedToa.mask_id) ?? "VISUAL"}
-                description={maskDescriptionById.get(equippedToa.mask_id) ?? ""}
                 offsetY={maskOffsetYById.get(equippedToa.mask_id) ?? 0}
               />
             ) : (
@@ -313,9 +312,6 @@ export function HomeClient({
                 transparent={maskTransparentById.get(equippedTuraga.mask_id)}
                 buffType={
                   maskBuffTypeById.get(equippedTuraga.mask_id) ?? "VISUAL"
-                }
-                description={
-                  maskDescriptionById.get(equippedTuraga.mask_id) ?? ""
                 }
                 offsetY={maskOffsetYById.get(equippedTuraga.mask_id) ?? 0}
               />

@@ -1,7 +1,7 @@
 import { PACK_LUCK_CAP } from "./constants";
 import { masks as maskDefs } from "./staticData";
 import type { GameStore } from "./store/gameStore";
-import type { BuffTotals, EquipSlot, UserMask } from "./types";
+import type { BuffTotals, UserMask } from "./types";
 
 function maskBuffValue(mask: UserMask): BuffTotals {
   const def = maskDefs.find((m) => m.mask_id === mask.mask_id);
