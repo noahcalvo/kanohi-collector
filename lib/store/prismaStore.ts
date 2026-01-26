@@ -4,7 +4,12 @@ import { prisma } from "../db/prisma";
 import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 import type { GameStore } from "./gameStore";
 
-function toUser(u: { id: string; createdAt: Date; updatedAt: Date }): User {
+function toUser(u: {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  clerkId?: string | null;
+}): User {
   return {
     id: u.id,
     username: u.id,
@@ -12,6 +17,7 @@ function toUser(u: { id: string; createdAt: Date; updatedAt: Date }): User {
     last_active_at: u.updatedAt,
     settings: {},
     created_from_guest: false,
+    clerk_id: u.clerkId ?? null,
   };
 }
 
