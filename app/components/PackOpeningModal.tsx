@@ -90,7 +90,7 @@ export function PackOpeningModal(props: {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex sm:items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm overflow-scroll"
+      className="fixed inset-0 z-[200] flex sm:items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm overflow-hidden h-[100dvh]"
       role="dialog"
       aria-modal="true"
       aria-label="Pack opening"

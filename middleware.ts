@@ -12,10 +12,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const isCreateAccountRoute = createRouteMatcher(["/api/me(.*)"]);
 const isTutorialRoute = createRouteMatcher(["/tutorial(.*)"]);
+const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
+const isTutorialApiRoute = createRouteMatcher(["/api/tutorial(.*)"]);
 
 export default clerkMiddleware(async (_auth, req: NextRequest) => {
   // Allow tutorial and account-creation endpoints (avoid redirect loops / onboarding flow).
-  if (isTutorialRoute(req) || isCreateAccountRoute(req)) {
+  if (
+    isTutorialRoute(req) ||
+    isTutorialApiRoute(req) ||
+    isCreateAccountRoute(req) ||
+    isAuthRoute(req)
+  ) {
     return NextResponse.next();
   }
 
@@ -23,20 +30,12 @@ export default clerkMiddleware(async (_auth, req: NextRequest) => {
   const hasGuestCookie = cookieHeader.includes("kanohi_guest_id=");
   const hasClerkCookie = cookieHeader.includes("__session=");
 
-  console.log(
-    "Middleware - hasGuestCookie:",
-    hasGuestCookie,
-    "hasClerkCookie:",
-    hasClerkCookie,
-  );
-
   // If neither guest nor clerk session present, enforce redirect to /tutorial
   if (!hasGuestCookie && !hasClerkCookie) {
     const pathname = req.nextUrl.pathname;
 
     // API routes -> JSON 401 (don't redirect fetches)
     if (pathname.startsWith("/api")) {
-      console.log("Middleware - unauthorized API request");
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
 
@@ -48,10 +47,6 @@ export default clerkMiddleware(async (_auth, req: NextRequest) => {
     const isClientSideNavigation =
       req.headers.get("next-url") ||
       (req.headers.get("referer") ?? req.headers.get("referrer"));
-
-    console.log("Middleware - isClientSideNavigation:", isClientSideNavigation);
-
-    console.log("req ", req);
 
     if (isDocumentRequest || isClientSideNavigation) {
       return NextResponse.redirect(new URL("/tutorial", req.url));

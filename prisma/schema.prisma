@@ -13,6 +13,22 @@ enum EquipSlot {
   TURAGA
 }
 
+enum Rarity {
+  COMMON
+  RARE
+  MYTHIC
+}
+
+enum TutorialStep {
+  INTRO_BIONICLE
+  INTRO_MASKS_PURPOSE
+  INTRO_GAME_USAGE
+  CHOOSE_RARE_MASK
+  OPEN_STARTER_PACK
+  ACCOUNT_PROMPT
+  COMPLETE_REDIRECT
+}
+
 model User {
   id        String   @id // Clerk userId
   clerkId   String?  // New field for Clerk ID
@@ -22,6 +38,37 @@ model User {
   masks     UserMask[]
   packs     UserPackProgress[]
   events    EventRow[]
+  packOpens PackOpen[]
+
+  tutorialProgress TutorialProgress[]
+
+  @@unique([clerkId])
+}
+
+model TutorialProgress {
+  id                     String       @id @default(cuid())
+  userId                 String
+  tutorialKey            String
+  currentStep            TutorialStep @default(INTRO_BIONICLE)
+
+  completedAt            DateTime?
+
+  rareMaskGrantedAt      DateTime?
+  rareMaskMaskId         String?
+
+  starterPackGrantedAt   DateTime?
+  starterPackClientRequestId String?
+  starterPackOpenedAt    DateTime?
+
+  accountPromptShownAt   DateTime?
+
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  user                   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tutorialKey, userId])
+  @@index([userId])
 }
 
 model UserMask {
@@ -68,4 +115,43 @@ model EventRow {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, timestamp])
+}
+
+model PackOpen {
+  id              String   @id @default(cuid())
+  userId          String
+  packId          String
+  clientRequestId String
+  seed            String
+  pityCounterAfter Int?
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pulls           PackOpenPull[]
+
+  @@unique([userId, clientRequestId])
+  @@index([userId, createdAt])
+}
+
+model PackOpenPull {
+  id                 String   @id @default(cuid())
+  packOpenId          String
+  idx                Int
+  maskId              String
+  rarity              Rarity
+  color               String
+  isNew               Boolean
+  wasColorNew         Boolean
+  essenceAwarded      Int
+  essenceRemaining    Int
+  finalEssenceRemaining Int
+  levelBefore         Int
+  levelAfter          Int
+  finalLevelAfter     Int
+  unlockedColors      String[] @default([])
+
+  packOpen            PackOpen @relation(fields: [packOpenId], references: [id], onDelete: Cascade)
+
+  @@unique([packOpenId, idx])
+  @@index([packOpenId])
 }

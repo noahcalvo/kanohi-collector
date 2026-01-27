@@ -14,6 +14,15 @@ export type GameStore = {
     userId: string,
     packId: string,
   ) => Promise<UserPackProgress | undefined>;
+
+  /**
+   * If supported by the backing store, lock the progress row for update.
+   * Used to serialize concurrent pack opens for the same user.
+   */
+  lockUserPackProgress: (
+    userId: string,
+    packId: string,
+  ) => Promise<UserPackProgress | undefined>;
   upsertUserPackProgress: (progress: UserPackProgress) => Promise<void>;
 
   appendEvent: (evt: EventRow) => Promise<void>;

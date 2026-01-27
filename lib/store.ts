@@ -56,7 +56,7 @@ const masksSeed: Mask[] = [
     buff_base_value: 0.03,
     max_level: 5,
     description: "Great Mask of Levitation with duplicate efficiency boost",
-    original_color: "gold",
+    original_color: "green",
     origin: "Toa Lewa",
     maskOffsetY: -12,
   },

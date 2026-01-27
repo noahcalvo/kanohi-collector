@@ -29,10 +29,10 @@ export async function GET(request: Request) {
 		console.log("Guest user upgraded:", resp);
 		// Clear the guest cookie
 		cookies().set(GUEST_COOKIE, "", { path: "/", expires: new Date(0) });
-		// Redirect to collection page (absolute URL required)
+		// Redirect home (absolute URL required)
 		// Use the request URL as base
 		// @ts-ignore: 'request' is available in API route context
-		return NextResponse.redirect(new URL("/collection", request.url));
+		return NextResponse.redirect(new URL("/", request.url));
 	} catch (err) {
 		console.log("Error upgrading guest user:", err);
 		return NextResponse.json({ error: "Failed to upgrade guest user", details: err }, { status: 500 });

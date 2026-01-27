@@ -18,6 +18,7 @@ export function createMemoryStore(opts?: {
       last_active_at: new Date(),
       settings: {},
       created_from_guest: true,
+      clerk_id: null,
     },
   ];
 
@@ -60,6 +61,7 @@ export function createMemoryStore(opts?: {
         last_active_at: new Date(),
         settings: {},
         created_from_guest: false,
+        clerk_id: null,
       };
       users.push(created);
       userPackProgress.push({
@@ -93,6 +95,13 @@ export function createMemoryStore(opts?: {
     },
 
     async getUserPackProgress(uid, pid) {
+      return userPackProgress.find(
+        (p) => p.user_id === uid && p.pack_id === pid,
+      );
+    },
+
+    async lockUserPackProgress(uid, pid) {
+      // In-memory store is single-threaded in tests; no-op locking.
       return userPackProgress.find(
         (p) => p.user_id === uid && p.pack_id === pid,
       );

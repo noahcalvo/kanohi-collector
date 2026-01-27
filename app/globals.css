@@ -185,6 +185,10 @@ body {
 
 
 @media (prefers-reduced-motion: reduce) {
+  .tutorial-drift {
+    animation: none;
+  }
+
   .new-color-ring {
     animation: none;
   }
@@ -464,4 +468,14 @@ body {
   .mythic-burst-star {
     display: none;
   }
+}
+
+@keyframes slow-float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+.tutorial-drift {
+  animation: slow-float 8s ease-in-out infinite;
 }

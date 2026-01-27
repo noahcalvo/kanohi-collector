@@ -14,7 +14,7 @@ describe("engine", () => {
   });
 
   it("opens a pack and consumes units", async () => {
-    const result = await openPack(USER_ID, PACK_ID, { seed: "seed-1" }, store);
+    const result = await openPack(true, USER_ID, PACK_ID, { seed: "seed-1" }, store);
     expect(result.masks.length).toBe(2);
     const progress = await store.getUserPackProgress(USER_ID, PACK_ID);
     expect(progress?.fractional_units).toBe(PACK_UNITS_PER_PACK - PACK_UNITS_PER_PACK);
@@ -27,7 +27,7 @@ describe("engine", () => {
     progress.pity_counter = 20;
     progress.fractional_units = PACK_UNITS_PER_PACK;
     await store.upsertUserPackProgress(progress);
-    const result = await openPack(USER_ID, PACK_ID, { seed: "seed-1" }, store);
+    const result = await openPack(true, USER_ID, PACK_ID, { seed: "seed-1" }, store);
     const hasRarePlus = result.masks.some((m) => m.rarity !== "COMMON");
     expect(hasRarePlus).toBe(true);
   });
@@ -47,8 +47,8 @@ describe("engine", () => {
       last_acquired_at: new Date(),
     });
 
-    await equipMask(USER_ID, "2", "TOA", store);
-    await equipMask(USER_ID, "1", "TOA", store);
+    await equipMask(true, USER_ID, "2", "TOA", store);
+    await equipMask(true, USER_ID, "1", "TOA", store);
     const maskA = await store.getUserMask(USER_ID, "2");
     const maskB = await store.getUserMask(USER_ID, "1");
     expect(maskA?.equipped_slot).toBe("NONE");
@@ -77,7 +77,7 @@ describe("engine", () => {
     for (let i = 0; i < 50; i += 1) {
       progress.fractional_units = PACK_UNITS_PER_PACK;
       await store.upsertUserPackProgress(progress);
-      await expect(openPack(USER_ID, PACK_ID, { seed: `seed-${i}` }, store)).resolves.toBeTruthy();
+      await expect(openPack(true, USER_ID, PACK_ID, { seed: `seed-${i}` }, store)).resolves.toBeTruthy();
     }
   });
 });

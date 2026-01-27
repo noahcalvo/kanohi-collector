@@ -20,12 +20,14 @@ interface HomeClientProps {
   initialStatus: StatusPayload;
   initialMe: MePayload;
   isGuest?: boolean;
+  tutorialCta?: "start" | "resume" | null;
 }
 
 export function HomeClient({
   initialStatus,
   initialMe,
   isGuest,
+  tutorialCta,
 }: HomeClientProps) {
   // Use hooks for real-time updates, but start with server data
   const { status, refreshStatus } = useStatus();
@@ -147,16 +149,6 @@ export function HomeClient({
     [currentMe?.collection],
   );
 
-  const maskDescriptionById = useMemo(
-    () =>
-      new Map(
-        currentMe?.collection?.map(
-          (m) => [m.mask_id, m.description] as const,
-        ) ?? [],
-      ),
-    [currentMe?.collection],
-  );
-
   const maskOffsetYById = useMemo(
     () =>
       new Map(
@@ -206,20 +198,8 @@ export function HomeClient({
   );
 
   return (
-    <div className="space-y-6">
-      {isGuest && (
-        <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
-          <div className="font-semibold text-lg mb-1">Welcome, Guest!</div>
-          <div className="mb-2 text-sm text-yellow-800 text-balance">
-            Your progress is saved locally. Create an account to save your
-            collection and play across devices.
-          </div>
-          <Link href="/sign-up" className="button-primary mt-2">
-            Create Account
-          </Link>
-        </div>
-      )}
-      <PackOpeningModal
+    <div className="overflow-hidden">
+            <PackOpeningModal
         open={packOverlayOpen}
         stage={packOverlayStage}
         results={results}
@@ -252,6 +232,36 @@ export function HomeClient({
             : null
         }
       />
+
+      <div className="space-y-6">
+      {isGuest && (
+        <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
+          <div className="font-semibold text-lg mb-1">Welcome, Guest!</div>
+          <div className="mb-2 text-sm text-yellow-800 text-balance">
+            Your progress is saved locally. Create an account to save your
+            collection and play across devices.
+          </div>
+          <Link href="/sign-up" className="button-primary mt-2">
+            Create Account
+          </Link>
+        </div>
+      )}
+
+      {tutorialCta && (
+        <div className="card bg-sky-50 border-sky-200 text-sky-900 flex flex-col items-center">
+          <div className="font-semibold text-lg mb-1">
+            Introduction
+          </div>
+          <div className="mb-2 text-sm text-sky-800 text-balance">
+            {tutorialCta === "start"
+              ? "Learn how masks work and claim your starter rewards."
+              : "Continue the tutorial and claim your starter rewards."}
+          </div>
+          <Link href="/tutorial" className="button-primary mt-2">
+            {tutorialCta === "start" ? "Start Tutorial" : "Resume Tutorial"}
+          </Link>
+        </div>
+      )}
 
       <section className="card">
         <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
@@ -325,6 +335,7 @@ export function HomeClient({
       {combinedError && (
         <p className="text-rose-700 text-sm">{combinedError}</p>
       )}
+    </div>
     </div>
   );
 }

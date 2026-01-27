@@ -14,6 +14,7 @@ export function createGuestUser(): User & { clerkId?: string | null } {
     last_active_at: new Date(),
     settings: {},
     created_from_guest: true,
+    clerk_id: null,
   };
 }
 

@@ -4,6 +4,14 @@ import { prisma } from "../db/prisma";
 import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 import type { GameStore } from "./gameStore";
 
+type PrismaLike = typeof prisma;
+type PrismaTx = Parameters<PrismaLike["$transaction"]>[0] extends (
+  tx: infer T,
+  ...args: any
+) => any
+  ? T
+  : never;
+
 function toUser(u: {
   id: string;
   createdAt: Date;
@@ -47,29 +55,36 @@ function toUserPackProgress(row: any): UserPackProgress {
   };
 }
 
-export const prismaStore: GameStore = {
+export function createPrismaStore(
+  client: PrismaLike | PrismaTx = prisma,
+): GameStore {
+  return {
   async getOrCreateUser(kanohiId: boolean, id: string): Promise<User> {
     let user;
     if (kanohiId) {
-      user = await prisma.user.upsert({
+      user = await client.user.upsert({
         where: { id: id },
         create: { id: id },
         update: {},
       });
     } else {
-      user = await prisma.user.findFirst({
-        where: { clerkId: id },
-      });
-    }
-    if (!user) {
-      throw new Error("Non-kanohi user not found with id " + id);
+      user = await client.user.findFirst({ where: { clerkId: id } });
+      if (!user) {
+        // First-time registered user: create an internal user id and bind it to Clerk.
+        user = await client.user.create({
+          data: {
+            id: randomUUID(),
+            clerkId: id,
+          },
+        });
+      }
     }
     console.log(
       `[prismaStore] getOrCreateUser: kanohiId=${kanohiId} userId=${id} -> id=${user.id}`,
     );
 
     // Ensure the default pack progress exists so new users can play immediately.
-    await prisma.userPackProgress.upsert({
+    await client.userPackProgress.upsert({
       where: { userId_packId: { userId: user.id, packId: "free_daily_v1" } },
       create: {
         userId: user.id,
@@ -89,19 +104,19 @@ export const prismaStore: GameStore = {
     userId: string,
     maskId: string,
   ): Promise<UserMask | undefined> {
-    const row = await prisma.userMask.findUnique({
+    const row = await client.userMask.findUnique({
       where: { userId_maskId: { userId, maskId } },
     });
     return row ? toUserMask(row) : undefined;
   },
 
   async getUserMasks(userId: string): Promise<UserMask[]> {
-    const rows = await prisma.userMask.findMany({ where: { userId } });
+    const rows = await client.userMask.findMany({ where: { userId } });
     return rows.map(toUserMask);
   },
 
   async upsertUserMask(entry: UserMask): Promise<void> {
-    await prisma.userMask.upsert({
+    await client.userMask.upsert({
       where: {
         userId_maskId: { userId: entry.user_id, maskId: entry.mask_id },
       },
@@ -133,14 +148,48 @@ export const prismaStore: GameStore = {
     userId: string,
     packId: string,
   ): Promise<UserPackProgress | undefined> {
-    const row = await prisma.userPackProgress.findUnique({
+    const row = await client.userPackProgress.findUnique({
       where: { userId_packId: { userId, packId } },
     });
     return row ? toUserPackProgress(row) : undefined;
   },
 
+  async lockUserPackProgress(
+    userId: string,
+    packId: string,
+  ): Promise<UserPackProgress | undefined> {
+    // Prisma doesn't expose row locking in the query builder; use a raw query.
+    // This must run inside a transaction to have any effect.
+    const rows = await (client as any).$queryRaw<
+      Array<{
+        userId: string;
+        packId: string;
+        fractionalUnits: number;
+        lastUnitTs: Date;
+        pityCounter: number;
+        lastPackClaimTs: Date | null;
+      }>
+    >`
+      SELECT "userId", "packId", "fractionalUnits", "lastUnitTs", "pityCounter", "lastPackClaimTs"
+      FROM "UserPackProgress"
+      WHERE "userId" = ${userId} AND "packId" = ${packId}
+      FOR UPDATE
+    `;
+    const row = rows?.[0];
+    return row
+      ? {
+          user_id: row.userId,
+          pack_id: row.packId,
+          fractional_units: row.fractionalUnits,
+          last_unit_ts: row.lastUnitTs,
+          pity_counter: row.pityCounter,
+          last_pack_claim_ts: row.lastPackClaimTs,
+        }
+      : undefined;
+  },
+
   async upsertUserPackProgress(progress: UserPackProgress): Promise<void> {
-    await prisma.userPackProgress.upsert({
+    await client.userPackProgress.upsert({
       where: {
         userId_packId: { userId: progress.user_id, packId: progress.pack_id },
       },
@@ -162,7 +211,7 @@ export const prismaStore: GameStore = {
   },
 
   async appendEvent(evt: EventRow): Promise<void> {
-    await prisma.eventRow.create({
+    await client.eventRow.create({
       data: {
         eventId: evt.event_id || randomUUID(),
         userId: evt.user_id ?? "none",
@@ -172,4 +221,7 @@ export const prismaStore: GameStore = {
       },
     });
   },
-};
+  };
+}
+
+export const prismaStore: GameStore = createPrismaStore(prisma);

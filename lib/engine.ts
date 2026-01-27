@@ -7,7 +7,6 @@ import {
   DUPLICATE_ESSENCE_BY_RARITY,
   GLOBAL_SEED_SALT,
   LEVEL_BASE_BY_RARITY,
-  MAX_LEVEL_BY_RARITY,
   PACK_UNITS_PER_PACK,
   PACK_UNIT_SECONDS,
   PITY_THRESHOLD,
@@ -96,7 +95,6 @@ function weightedSample<T>(
 }
 
 function sampleRarityWithPackLuck(bonus: number, rand: () => number): Rarity {
-  const rarePlusBase = RARITY_BASE_PROBS.MYTHIC + RARITY_BASE_PROBS.RARE;
   const scale = 1 + bonus;
   const rare = RARITY_BASE_PROBS.RARE * scale;
   const mythic = RARITY_BASE_PROBS.MYTHIC * scale;
@@ -126,7 +124,16 @@ const COLOR_PALETTES_BY_SET_AND_RARITY: Record<
       "light gray",
       "dark gray",
     ],
-    RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+    RARE: [
+      "standard",
+      "red",
+      "blue",
+      "green",
+      "brown",
+      "white",
+      "black",
+      "gold",
+    ],
     MYTHIC: ["standard"],
   },
 };
@@ -141,9 +148,150 @@ const DEFAULT_COLORS_BY_RARITY: Record<Rarity, string[]> = {
     "light gray",
     "dark gray",
   ],
-  RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+  RARE: [
+    "standard",
+    "red",
+    "blue",
+    "green",
+    "brown",
+    "white",
+    "black",
+    "gold",
+  ],
   MYTHIC: ["standard"],
 };
+
+export async function openTutorialCommonsOnlyPack(
+  guest: boolean,
+  userId: string,
+  opts?: { seed?: string; pulls?: number },
+  store: GameStore = prismaStore,
+): Promise<OpenResult> {
+  const user = await store.getOrCreateUser(guest, userId);
+  const pulls = Math.max(1, Math.min(opts?.pulls ?? 2, 10));
+
+  const userMasks = await store.getUserMasks(user.id);
+  const userMaskByMaskId = new Map(
+    userMasks.map((m) => [m.mask_id, m] as const),
+  );
+  const ownedMaskIds = new Set(
+    userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id),
+  );
+
+  const buffs = await computeBuffs(user.id, store);
+  const seed =
+    opts?.seed ??
+    `${user.id}-${Date.now()}-${GLOBAL_SEED_SALT}-tutorial-commons-only`;
+  const rand = seededRandom(seed);
+
+  // Tutorial pack does not affect daily pack pity/cooldown; we still return the current pity.
+  const progress = await store.getUserPackProgress(user.id, "free_daily_v1");
+  const pityCounter = progress?.pity_counter ?? 0;
+
+  const results: DrawResultItem[] = [];
+  for (let i = 0; i < pulls; i += 1) {
+    const rarity: Rarity = "COMMON";
+
+    const exclude = new Set<string>();
+    let mask = sampleMaskByRarity(rarity, rand, exclude, ownedMaskIds);
+    mask = discoveryReroll(rarity, rand, buffs.discovery, mask, ownedMaskIds);
+
+    let userMask = ensureUserMaskLocal(user.id, mask.mask_id, userMaskByMaskId);
+    const color = sampleColor(mask, userMask.unlocked_colors, rand);
+    const isNew = userMask.owned_count === 0;
+    const rarityKey = mask.base_rarity;
+
+    let essenceAwarded = 0;
+    if (!isNew) {
+      const baseEssence = DUPLICATE_ESSENCE_BY_RARITY[rarityKey];
+      essenceAwarded = Math.round(baseEssence * (1 + buffs.duplicate_eff));
+      userMask.essence += essenceAwarded;
+    }
+
+    const levelBefore = userMask.level;
+    userMask.owned_count += 1;
+
+    const wasColorNew =
+      color !== "standard" && !userMask.unlocked_colors.includes(color);
+    if (wasColorNew) {
+      userMask.unlocked_colors = addColor(userMask.unlocked_colors, color);
+    }
+
+    userMask.last_acquired_at = new Date();
+    userMask = applyLeveling(userMask, mask);
+
+    userMaskByMaskId.set(userMask.mask_id, userMask);
+    if (userMask.owned_count > 0) ownedMaskIds.add(userMask.mask_id);
+    await store.upsertUserMask(userMask);
+
+    await store.appendEvent({
+      event_id: randomUUID(),
+      user_id: user.id,
+      type: "mask_pull",
+      payload: {
+        mask_id: mask.mask_id,
+        rarity,
+        color,
+        is_new: isNew,
+        was_color_new: wasColorNew,
+        source: "tutorial_starter_pack",
+      },
+      timestamp: new Date(),
+    });
+
+    results.push({
+      mask_id: mask.mask_id,
+      name: mask.name,
+      rarity,
+      color,
+      is_new: isNew,
+      was_color_new: wasColorNew,
+      essence_awarded: essenceAwarded,
+      essence_remaining: userMask.essence,
+      final_essence_remaining: userMask.essence,
+      level_before: levelBefore,
+      level_after: userMask.level,
+      final_level_after: userMask.level,
+      unlocked_colors: userMask.unlocked_colors,
+      transparent: mask.transparent,
+    });
+  }
+
+  const maskStates = new Map<
+    string,
+    { essence_remaining: number; level_after: number }
+  >();
+  for (const result of results) {
+    const currentUserMask = userMaskByMaskId.get(result.mask_id);
+    if (currentUserMask) {
+      maskStates.set(result.mask_id, {
+        essence_remaining: currentUserMask.essence,
+        level_after: currentUserMask.level,
+      });
+    }
+  }
+  for (const result of results) {
+    const finalState = maskStates.get(result.mask_id);
+    if (finalState) {
+      result.final_essence_remaining = finalState.essence_remaining;
+      result.final_level_after = finalState.level_after;
+    }
+  }
+
+  await store.appendEvent({
+    event_id: randomUUID(),
+    user_id: user.id,
+    type: "pack_open",
+    payload: {
+      pack_id: "tutorial_starter_pack_v1",
+      seed_policy: "commons_only",
+      results,
+    },
+    timestamp: new Date(),
+  });
+
+  return { masks: results, pity_counter: pityCounter };
+}
 
 // available colors depend on rarity and set id
 export function getAvailableColors(rarity: Rarity, setId: number): string[] {
@@ -251,9 +399,9 @@ function addColor(unlocked: string[], color: string): string[] {
   return unlocked.includes(color) ? unlocked : [...unlocked, color];
 }
 
-function applyLeveling(mask: UserMask, rarity: Rarity): UserMask {
-  const base = LEVEL_BASE_BY_RARITY[rarity];
-  const maxLevel = MAX_LEVEL_BY_RARITY[rarity];
+function applyLeveling(mask: UserMask, def: Mask): UserMask {
+  const base = LEVEL_BASE_BY_RARITY[def.base_rarity];
+  const maxLevel = def.max_level;
   while (mask.level < maxLevel) {
     const cost = base * mask.level;
     if (mask.essence < cost) break;
@@ -303,7 +451,9 @@ export async function openPack(
   const pack = db.packs.find((p) => p.pack_id === packId);
   if (!pack) throw new Error("Pack not found");
 
-  let progress = await store.getUserPackProgress(user.id, packId);
+  // Pack opens must serialize per user to prevent concurrent double-spends.
+  // If the store supports row locking, take it here.
+  let progress = await store.lockUserPackProgress(user.id, packId);
   if (!progress) {
     warn(
       `packStatus: no progress found for user ${user.id} and pack ${packId}, initializing`,
@@ -317,6 +467,9 @@ export async function openPack(
       last_pack_claim_ts: null,
     };
     await store.upsertUserPackProgress(progress);
+
+    // Now that it exists, lock it if possible.
+    progress = (await store.lockUserPackProgress(user.id, packId)) ?? progress;
   }
 
   const userMasks = await store.getUserMasks(user.id);
@@ -376,7 +529,7 @@ export async function openPack(
     }
 
     userMask.last_acquired_at = new Date();
-    userMask = applyLeveling(userMask, rarityKey);
+    userMask = applyLeveling(userMask, mask);
 
     userMaskByMaskId.set(userMask.mask_id, userMask);
     if (userMask.owned_count > 0) ownedMaskIds.add(userMask.mask_id);
@@ -553,7 +706,7 @@ export async function mePayload(
     };
     await store.upsertUserPackProgress(progress);
   }
-  const status = await packStatus(true, user.id, "free_daily_v1", store);
+  const status = await packStatus(kanohiId, user.id, "free_daily_v1", store);
   const userMasks = await store.getUserMasks(user.id);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const unlockedColors: Record<string, string[]> = {};
