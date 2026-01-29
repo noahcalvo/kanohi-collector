@@ -27,7 +27,18 @@ export function BottomNav() {
   const npe = searchParams.get("npe");
   const [showCollectionTip, setShowCollectionTip] = useState(false);
 
+  const hideNav =
+    pathname === "/splash" ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up") ||
+    pathname.startsWith("/tutorial");
+
   useEffect(() => {
+    if (hideNav) {
+      setShowCollectionTip(false);
+      return;
+    }
+
     if (pathname !== "/") {
       setShowCollectionTip(false);
       try {
@@ -61,7 +72,9 @@ export function BottomNav() {
     }
 
     setShowCollectionTip(stored);
-  }, [npe, pathname, router]);
+  }, [hideNav, npe, pathname, router]);
+
+  if (hideNav) return null;
 
   return (
     <nav
@@ -106,7 +119,7 @@ export function BottomNav() {
               <div
                 role="status"
                 aria-live="polite"
-                className="absolute -top-20 left-1/2 z-20 w-64 -translate-x-1/2 rounded-2xl border border-sky-600/60 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-900 shadow-[0_-18px_60px_rgba(2,132,199,0.22),0_0_18px_rgba(2,132,199,0.10)]"
+                className="absolute -top-20 left-1/2 z-20 w-60 -translate-x-1/2 rounded-2xl border border-sky-600/60 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-900 shadow-[0_-18px_60px_rgba(2,132,199,0.22),0_0_18px_rgba(2,132,199,0.10)]"
               >
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 p-2">

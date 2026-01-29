@@ -3,21 +3,23 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Behavior:
- * - If there's no Clerk session cookie and no guest cookie, redirect to /tutorial for:
+ * - If there's no Clerk session cookie and no guest cookie, redirect to /splash for:
  *   - Document requests (accept: text/html)
  *   - Next.js client-side navigations (/_next/data, x-nextjs-data, or accept: application/json)
  * - For API routes, return a 401 JSON response.
- * - Always allow /tutorial and the create-account endpoint (/api/me) to pass through.
+ * - Always allow /splash, /tutorial and the create-account endpoint (/api/me) to pass through.
  */
 
 const isCreateAccountRoute = createRouteMatcher(["/api/me(.*)"]);
 const isTutorialRoute = createRouteMatcher(["/tutorial(.*)"]);
 const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 const isTutorialApiRoute = createRouteMatcher(["/api/tutorial(.*)"]);
+const isSplashRoute = createRouteMatcher(["/splash(.*)"]);
 
 export default clerkMiddleware(async (_auth, req: NextRequest) => {
   // Allow tutorial and account-creation endpoints (avoid redirect loops / onboarding flow).
   if (
+    isSplashRoute(req) ||
     isTutorialRoute(req) ||
     isTutorialApiRoute(req) ||
     isCreateAccountRoute(req) ||
@@ -49,7 +51,7 @@ export default clerkMiddleware(async (_auth, req: NextRequest) => {
       (req.headers.get("referer") ?? req.headers.get("referrer"));
 
     if (isDocumentRequest || isClientSideNavigation) {
-      return NextResponse.redirect(new URL("/tutorial", req.url));
+      return NextResponse.redirect(new URL("/splash", req.url));
     }
 
     // conservative fallback
