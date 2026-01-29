@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CollectionMask, EquipSlot, Rarity, Mask, MePayload } from "../../../lib/types";
 
+import { InlineNotice } from "../../components/InlineNotice";
 import { useEquipMask } from "../../hooks/useEquipMask";
 import { useMe } from "../../hooks/useMe";
 import { CollectionStats } from "./CollectionStats";
@@ -19,7 +20,9 @@ export function CollectionClient({
   allMasks,
 }: CollectionClientProps) {
   // Use the hook to get real-time updates, but start with server data
-  const { me, refreshMe } = useMe();
+  const { me, refreshMe, error: meError, clearError: clearMeError } = useMe({
+    initialMe,
+  });
   const currentMe = me ?? initialMe;
 
   const { equip, equipping, equipError, clearEquipError } = useEquipMask({
@@ -151,6 +154,18 @@ export function CollectionClient({
 
   return (
     <div className="space-y-6">
+      {meError && (
+        <InlineNotice
+          tone="error"
+          message={meError}
+          actionLabel="Retry"
+          onAction={() => {
+            clearMeError();
+            refreshMe();
+          }}
+        />
+      )}
+
       <section className="card">
         {currentMe ? (
           currentMe.collection.length === 0 ? (
@@ -185,7 +200,7 @@ export function CollectionClient({
         )}
       </section>
 
-      {equipError && <p className="text-rose-700 text-sm">{equipError}</p>}
+      {equipError && <InlineNotice tone="error" message={equipError} />}
 
       {currentMe?.collection && (
         <CollectionStats

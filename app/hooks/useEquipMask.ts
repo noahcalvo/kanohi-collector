@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { EquipSlot } from "../../lib/types";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
@@ -25,32 +26,29 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
       setEquipping(equipLabel(maskId, slot));
       setEquipError(null);
 
-      // If a color is provided, set it first
-      if (color) {
-        const colorRes = await fetch(`/api/mask/${maskId}/color`, {
+      try {
+        // If a color is provided, set it first
+        if (color) {
+          await fetchJson(`/api/mask/${maskId}/color`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ color }),
+          });
+        }
+
+        await fetchJson(`/api/mask/${maskId}/equip`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ color }),
+          body: JSON.stringify({ slot }),
         });
-        if (!colorRes.ok) {
-          setEquipError("Color change failed");
-          setEquipping(null);
-          return;
-        }
-      }
 
-      const res = await fetch(`/api/mask/${maskId}/equip`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slot }),
-      });
-      if (!res.ok) {
-        setEquipError("Equip failed");
+        await refreshMe();
+      } catch (err) {
+        if (err instanceof ApiError) setEquipError(err.message);
+        else setEquipError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
         setEquipping(null);
-        return;
       }
-      await refreshMe();
-      setEquipping(null);
     },
     [equipLabel, refreshMe]
   );

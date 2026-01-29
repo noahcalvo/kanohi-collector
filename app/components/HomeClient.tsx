@@ -2,9 +2,10 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { buffPercent } from "../../lib/clientConstants";
 import type { EquipSlot, MePayload, StatusPayload } from "../../lib/types";
+import { InlineNotice } from "../components/InlineNotice";
 import { EquippedMaskCard } from "../components/MaskCards";
 import { NakedHead } from "../components/NakedHead";
 import { PackOpeningModal } from "../components/PackOpeningModal";
@@ -30,35 +31,25 @@ export function HomeClient({
   tutorialCta,
 }: HomeClientProps) {
   // Use hooks for real-time updates, but start with server data
-  const { status, refreshStatus } = useStatus();
-  const { me, refreshMe } = useMe();
+  const {
+    status,
+    refreshStatus,
+    loading: statusLoading,
+    error: statusError,
+    clearError: clearStatusError,
+  } = useStatus({ initialStatus });
+  const {
+    me,
+    refreshMe,
+    loading: meLoading,
+    error: meError,
+    clearError: clearMeError,
+  } = useMe({ initialMe });
 
   const currentStatus = status ?? initialStatus;
   const currentMe = me ?? initialMe;
 
-  // Countdown timer state
-  const [seconds, setSeconds] = useState(currentStatus?.time_to_ready ?? 0);
-
-  // Sync timer with status updates
-  useEffect(() => {
-    setSeconds(currentStatus?.time_to_ready ?? 0);
-  }, [currentStatus?.time_to_ready]);
-
-  // Ticking logic
-  useEffect(() => {
-    if (seconds <= 0) return;
-    const interval = setInterval(() => {
-      setSeconds((prev: number) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [seconds]);
-
-  // When countdown hits zero, refresh status to update pack readiness
-  useEffect(() => {
-    if (seconds === 0) {
-      refreshStatus();
-    }
-  }, [seconds, refreshStatus]);
+  const secondsFromServer = currentStatus?.time_to_ready ?? 0;
 
   const {
     opening,
@@ -199,11 +190,12 @@ export function HomeClient({
 
   return (
     <div className="overflow-hidden">
-            <PackOpeningModal
+      <PackOpeningModal
         open={packOverlayOpen}
         stage={packOverlayStage}
         results={results}
         revealedCount={revealedCount}
+        errorMessage={packError}
         onEquip={equipAndClear}
         equipping={equipping}
         onClose={closePackOverlay}
@@ -234,6 +226,43 @@ export function HomeClient({
       />
 
       <div className="space-y-6">
+      {combinedError && (
+        <InlineNotice
+          tone="error"
+          message={combinedError}
+          actionLabel="Dismiss"
+          onAction={() => {
+            clearPackError();
+            clearEquipError();
+            clearChangeError();
+          }}
+        />
+      )}
+
+      {statusError && (
+        <InlineNotice
+          tone="error"
+          message={statusError}
+          actionLabel={statusLoading ? "Retrying…" : "Retry"}
+          onAction={() => {
+            clearStatusError();
+            refreshStatus();
+          }}
+        />
+      )}
+
+      {meError && (
+        <InlineNotice
+          tone="error"
+          message={meError}
+          actionLabel={meLoading ? "Retrying…" : "Retry"}
+          onAction={() => {
+            clearMeError();
+            refreshMe();
+          }}
+        />
+      )}
+
       {isGuest && (
         <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
           <div className="mb-2 text-xs text-yellow-800 text-pretty">
@@ -267,7 +296,10 @@ export function HomeClient({
           Pack cooldown
         </h2>
         {currentStatus ? (
-          <TimeToReadyCountdown seconds={seconds} />
+          <TimeToReadyCountdown
+            seconds={secondsFromServer}
+            onReady={refreshStatus}
+          />
         ) : (
           <p className="text-slate-500 text-sm mt-3">Loading...</p>
         )}
@@ -277,9 +309,13 @@ export function HomeClient({
         <button
           className="button-primary text-lg px-10 py-4"
           onClick={openPack}
-          disabled={seconds > 0 || opening}
+          disabled={!currentStatus?.pack_ready || opening}
         >
-          {opening ? "Opening..." : seconds === 0 ? "Open Pack" : "Not ready"}
+          {opening
+            ? "Opening..."
+            : currentStatus?.pack_ready
+              ? "Open Pack"
+              : "Not ready"}
         </button>
       </section>
 

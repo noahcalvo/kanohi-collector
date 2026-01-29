@@ -1,4 +1,3 @@
-import { warn } from "console";
 import { randomUUID } from "crypto";
 import { computeBuffs } from "./buffs";
 import {
@@ -12,6 +11,7 @@ import {
   PITY_THRESHOLD,
   RARITY_BASE_PROBS,
 } from "./constants";
+import { log } from "./logger";
 import { masks as maskDefs, packs as packDefs } from "./staticData";
 import type { GameStore } from "./store/gameStore";
 import { prismaStore } from "./store/prismaStore";
@@ -455,8 +455,8 @@ export async function openPack(
   // If the store supports row locking, take it here.
   let progress = await store.lockUserPackProgress(user.id, packId);
   if (!progress) {
-    warn(
-      `packStatus: no progress found for user ${user.id} and pack ${packId}, initializing`,
+    log.warn(
+      `[openPack] missing progress row; initializing userId=${user.id} packId=${packId}`,
     );
     progress = {
       user_id: user.id,
@@ -615,20 +615,13 @@ export async function packStatus(
   userId: string,
   packId: string,
   store: GameStore = prismaStore,
+  opts?: { buffs?: Awaited<ReturnType<typeof computeBuffs>> },
 ) {
-  console.log(
-    "fetching pack status for user:",
-    userId,
-    "pack:",
-    packId,
-    "guest: ",
-    guest,
-  );
   const user = await store.getOrCreateUser(guest, userId);
   let progress = await store.getUserPackProgress(user.id, packId);
   if (!progress) {
-    warn(
-      `packStatus: no progress found for user ${user.id} and pack ${packId}, initializing`,
+    log.warn(
+      `[packStatus] missing progress row; initializing userId=${user.id} packId=${packId}`,
     );
     progress = {
       user_id: user.id,
@@ -640,11 +633,10 @@ export async function packStatus(
     };
     await store.upsertUserPackProgress(progress);
   }
-  const buffs = await computeBuffs(user.id, store);
+  const buffs = opts?.buffs ?? (await computeBuffs(user.id, store));
   const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
 
   if (PACK_UNIT_SECONDS <= 0) {
-    warn(`[packStatus] Timer disabled, returning ready`);
     return {
       pack_ready: true,
       time_to_ready: 0,
@@ -667,9 +659,6 @@ export async function packStatus(
       Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
       0,
     ) - timeSince;
-  warn(
-    `[packStatus] Calculated: timeSince=${timeSince}, speedMultiplier=${speedMultiplier}, unitsGained=${unitsGained}, unitsNeeded=${unitsNeeded}, timeToReady=${timeToReady}`,
-  );
   const result = {
     pack_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK,
     time_to_ready:
@@ -677,7 +666,6 @@ export async function packStatus(
     fractional_units: refreshed.fractional_units,
     pity_counter: refreshed.pity_counter,
   };
-  warn(`[packStatus] Returning:`, result);
   return result;
 }
 
@@ -686,27 +674,13 @@ export async function mePayload(
   userId: string,
   store: GameStore = prismaStore,
 ) {
-  console.log("Generating mePayload for user:", userId, "guest:", kanohiId);
   const user = await store.getOrCreateUser(kanohiId, userId);
   if (!user) throw new Error("User not found");
   // Ensure user exists before upserting pack progress
   const buffs = await computeBuffs(user.id, store);
-  let progress = await store.getUserPackProgress(user.id, "free_daily_v1");
-  if (!progress) {
-    warn(
-      `packStatus: no progress found for user ${user.id} and pack free_daily_v1, initializing`,
-    );
-    progress = {
-      user_id: user.id,
-      pack_id: "free_daily_v1",
-      fractional_units: PACK_UNITS_PER_PACK,
-      last_unit_ts: new Date(),
-      pity_counter: 0,
-      last_pack_claim_ts: null,
-    };
-    await store.upsertUserPackProgress(progress);
-  }
-  const status = await packStatus(kanohiId, user.id, "free_daily_v1", store);
+  const status = await packStatus(kanohiId, user.id, "free_daily_v1", store, {
+    buffs,
+  });
   const userMasks = await store.getUserMasks(user.id);
   const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const unlockedColors: Record<string, string[]> = {};
@@ -740,46 +714,40 @@ export async function mePayload(
     equipped,
     total_buffs: buffs,
     next_pack_ready_in_seconds: status.time_to_ready,
-    fractional_units: progress.fractional_units,
+    fractional_units: status.fractional_units,
     unlocked_colors: unlockedColors,
     collection,
     color_availability: calculateColorAvailability(userMasks),
   };
 }
 
+const MASK_IDS_BY_COLOR: ReadonlyMap<string, readonly string[]> = (() => {
+  const out = new Map<string, string[]>();
+  for (const mask of db.masks) {
+    const colors = getAvailableColors(mask.base_rarity, mask.generation);
+    for (const color of colors) {
+      const existing = out.get(color);
+      if (existing) existing.push(mask.mask_id);
+      else out.set(color, [mask.mask_id]);
+    }
+  }
+  return out;
+})();
+
 function calculateColorAvailability(
   userMasks: UserMask[],
 ): Record<string, { owned: number; available: number }> {
+  const userMaskById = new Map(userMasks.map((um) => [um.mask_id, um] as const));
   const colorStats: Record<string, { owned: number; available: number }> = {};
 
-  // Get all possible colors across all rarities
-  const allPossibleColors = new Set<string>();
-  Object.values(DEFAULT_COLORS_BY_RARITY).forEach((colors) => {
-    colors.forEach((c) => allPossibleColors.add(c));
-  });
-
-  // For each color, count owned and calculate available
-  allPossibleColors.forEach((color) => {
+  for (const [color, maskIds] of MASK_IDS_BY_COLOR) {
     let owned = 0;
-    let available = 0;
-
-    // Count masks that can have this color
-    db.masks.forEach((mask) => {
-      const maskColors = getAvailableColors(mask.base_rarity, mask.generation);
-      if (maskColors.includes(color)) {
-        available++;
-        // Check if user has unlocked this color on this mask
-        const userMask = userMasks.find((um) => um.mask_id === mask.mask_id);
-        if (userMask && userMask.unlocked_colors.includes(color)) {
-          owned++;
-        }
-      }
-    });
-
-    if (available > 0) {
-      colorStats[color] = { owned, available };
+    for (const maskId of maskIds) {
+      const um = userMaskById.get(maskId);
+      if (um?.unlocked_colors.includes(color)) owned += 1;
     }
-  });
+    colorStats[color] = { owned, available: maskIds.length };
+  }
 
   return colorStats;
 }

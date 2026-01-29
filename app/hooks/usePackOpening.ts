@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenResult } from "../../lib/types";
 import type { PackOverlayStage } from "../components/PackOpeningModal";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function usePackOpening(args: {
   packReady: boolean;
@@ -141,28 +142,26 @@ export function usePackOpening(args: {
       }, 1250)
     );
 
-    const res = await fetch("/api/packs/open", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pack_id: "free_daily_v1",
-        client_request_id: crypto.randomUUID(),
-      }),
-    });
-
-    if (!res.ok) {
-      setPackError("Pack open failed");
-      setOpening(false);
+    try {
+      const data = await fetchJson<OpenResult>("/api/packs/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pack_id: "free_daily_v1",
+          client_request_id: crypto.randomUUID(),
+        }),
+      });
+      setResults(data);
+      refreshStatus();
+    } catch (err) {
+      if (err instanceof ApiError) setPackError(err.message);
+      else setPackError(err instanceof Error ? err.message : "Unknown error");
       setPackOverlayStage("error");
-      return;
+    } finally {
+      setOpening(false);
     }
-
-    const data: OpenResult = await res.json();
-    setResults(data);
-    setOpening(false);
-    refreshStatus();
     // Don't refresh user data yet - wait until modal closes to avoid background updates
-  }, [opening, packReady, refreshMe, refreshStatus]);
+  }, [opening, packReady, refreshStatus]);
 
   return {
     opening,

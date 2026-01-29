@@ -1,10 +1,6 @@
 "use client";
 
-import { useMe } from "../hooks/useMe";
-
 export default function ShopPage() {
-  const { me } = useMe();
-
   return (
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">

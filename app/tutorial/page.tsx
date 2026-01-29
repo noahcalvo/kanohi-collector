@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PackOpeningModal } from "@/app/components/PackOpeningModal";
 import type { PackOverlayStage } from "@/app/components/PackOpeningModal";
+import { ApiError, fetchJson } from "@/app/lib/fetchJson";
 import { ClaimGreatMaskSection } from "@/app/tutorial/components/ClaimGreatMaskSection";
 import { CreateAccountSection } from "@/app/tutorial/components/CreateAccountSection";
 import { OpenStarterPackSection } from "@/app/tutorial/components/OpenStarterPackSection";
@@ -70,18 +71,15 @@ export default function TutorialPage() {
 
   const refresh = useCallback(async () => {
     setError(null);
-    const res = await fetch("/api/tutorial/progress", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) {
+    try {
+      const data = await fetchJson<ProgressResponse>("/api/tutorial/progress");
+      setProgress(data);
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.message);
+      else setError(err instanceof Error ? err.message : "Failed to load tutorial");
+    } finally {
       setLoading(false);
-      setError("Failed to load tutorial");
-      return;
     }
-    const data: ProgressResponse = await res.json();
-    setProgress(data);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -122,18 +120,16 @@ export default function TutorialPage() {
     if (screenBusy) return;
     setError(null);
     setScreenBusy(true);
-    const res = await fetch("/api/tutorial/advance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      setError("Could not advance tutorial");
-      setScreenBusy(false);
-      return;
-    }
     try {
+      await fetchJson("/api/tutorial/advance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
       await refresh();
+    } catch (err) {
+      if (err instanceof ApiError) setError(err.message);
+      else setError(err instanceof Error ? err.message : "Could not advance tutorial");
     } finally {
       setScreenBusy(false);
     }
@@ -154,17 +150,19 @@ export default function TutorialPage() {
   const claimMask = useCallback(
     async (maskId: string): Promise<boolean> => {
       setError(null);
-      const res = await fetch("/api/tutorial/claim-rare-mask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selection: { maskId } }),
-      });
-      if (!res.ok) {
-        setError("Could not claim mask");
+      try {
+        await fetchJson("/api/tutorial/claim-rare-mask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selection: { maskId } }),
+        });
+        await refresh();
+        return true;
+      } catch (err) {
+        if (err instanceof ApiError) setError(err.message);
+        else setError(err instanceof Error ? err.message : "Could not claim mask");
         return false;
       }
-      await refresh();
-      return true;
     },
     [refresh],
   );
@@ -219,20 +217,19 @@ export default function TutorialPage() {
       setTimeout(() => setPackOverlayAnimationDone(true), 1250),
     );
 
-    const res = await fetch("/api/tutorial/open-starter-pack", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-
-    if (!res.ok) {
+    let data: { opened: boolean; results: OpenResult | null };
+    try {
+      data = await fetchJson("/api/tutorial/open-starter-pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+    } catch (err) {
       setPackOverlayStage("error");
-      setError("Starter pack open failed");
+      if (err instanceof ApiError) setError(err.message);
+      else setError(err instanceof Error ? err.message : "Starter pack open failed");
       return;
     }
-
-    const data: { opened: boolean; results: OpenResult | null } =
-      await res.json();
     if (!data.opened || !data.results) {
       // Review mode: nothing to show.
       closePackOverlay();
@@ -305,6 +302,7 @@ export default function TutorialPage() {
         stage={packOverlayStage}
         results={packResults}
         revealedCount={0}
+        errorMessage={error}
         onClose={closePackOverlay}
         onAdvance={advancePackOverlay}
       />

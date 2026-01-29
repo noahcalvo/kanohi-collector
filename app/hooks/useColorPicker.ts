@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function useColorPicker(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
@@ -17,18 +18,20 @@ export function useColorPicker(args: { refreshMe: () => Promise<void> | void }) 
       setChanging(maskId);
       setChangeError(null);
 
-      const res = await fetch(`/api/mask/${maskId}/color`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ color }),
-      });
-      if (!res.ok) {
-        setChangeError("Color change failed");
+      try {
+        await fetchJson(`/api/mask/${maskId}/color`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ color }),
+        });
+        await refreshMe();
+      } catch (err) {
+        if (err instanceof ApiError) setChangeError(err.message);
+        else
+          setChangeError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
         setChanging(null);
-        return;
       }
-      await refreshMe();
-      setChanging(null);
     },
     [refreshMe],
   );

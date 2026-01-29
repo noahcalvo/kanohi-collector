@@ -1,24 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MePayload } from "../../lib/types";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
-export function useMe() {
-  const [me, setMe] = useState<MePayload | null>(null);
+export function useMe(options?: {
+  initialMe?: MePayload;
+  autoFetch?: boolean;
+}) {
+  const initialMe = options?.initialMe ?? null;
+  const autoFetch = options?.autoFetch ?? (initialMe == null);
+
+  const [me, setMe] = useState<MePayload | null>(initialMe);
+  const [loading, setLoading] = useState<boolean>(initialMe == null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const refreshMe = useCallback(async () => {
-    const res = await fetch("/api/me");
-    if (!res.ok) {
-      console.error("Failed to fetch /api/me", res.statusText);
-      return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchJson<MePayload>("/api/me", {
+        signal: controller.signal,
+      });
+      setMe(data);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (err instanceof ApiError) setError(err.message);
+      else setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    setMe(data);
   }, []);
 
   useEffect(() => {
+    if (!autoFetch) return;
     refreshMe();
-  }, [refreshMe]);
+    return () => abortRef.current?.abort();
+  }, [autoFetch, refreshMe]);
 
-  return { me, refreshMe };
+  const clearError = useCallback(() => setError(null), []);
+
+  return { me, refreshMe, loading, error, clearError };
 }

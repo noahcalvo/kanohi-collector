@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { PACK_UNITS_PER_PACK } from "../constants";
 import { prisma } from "../db/prisma";
+import { log } from "../logger";
 import type { EventRow, User, UserMask, UserPackProgress } from "../types";
 import type { GameStore } from "./gameStore";
 
@@ -79,7 +80,7 @@ export function createPrismaStore(
         });
       }
     }
-    console.log(
+    log.debug(
       `[prismaStore] getOrCreateUser: kanohiId=${kanohiId} userId=${id} -> id=${user.id}`,
     );
 

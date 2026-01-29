@@ -21,6 +21,7 @@ export function PackOpeningModal(props: {
   stage: PackOverlayStage;
   results: OpenResult | null;
   revealedCount: number;
+  errorMessage?: string | null;
   onEquip?: (
     maskId: string,
     slot: EquipSlot,
@@ -47,6 +48,7 @@ export function PackOpeningModal(props: {
     open,
     stage,
     results,
+    errorMessage,
     onEquip,
     equipping,
     onClose,
@@ -213,7 +215,9 @@ export function PackOpeningModal(props: {
           )}
 
           {stage === "error" && (
-            <div className="mt-6 text-sm text-rose-700">Pack open failed</div>
+            <div className="mt-6 text-sm text-rose-700">
+              {errorMessage ?? "Pack open failed"}
+            </div>
           )}
 
           {showFirstOnly && firstMask && (

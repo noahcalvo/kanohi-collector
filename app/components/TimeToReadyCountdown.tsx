@@ -1,12 +1,52 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
 interface TimeToReadyCountdownProps {
   seconds: number;
+  onReady?: () => void;
 }
 
-export function TimeToReadyCountdown({ seconds }: TimeToReadyCountdownProps) {
+export function TimeToReadyCountdown({
+  seconds,
+  onReady,
+}: TimeToReadyCountdownProps) {
+  const [remaining, setRemaining] = useState(seconds);
+  const hasNotifiedRef = useRef(false);
+  const onReadyRef = useRef<TimeToReadyCountdownProps["onReady"]>(undefined);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  // Sync internal timer with server updates.
+  useEffect(() => {
+    setRemaining(seconds);
+    hasNotifiedRef.current = false;
+  }, [seconds]);
+
+  // Tick locally without forcing the whole page to re-render.
+  const active = remaining > 0;
+  useEffect(() => {
+    if (!active) return;
+    const interval = window.setInterval(() => {
+      setRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [active]);
+
+  // When the countdown hits zero, ask the caller to refresh server state.
+  useEffect(() => {
+    if (remaining !== 0) return;
+    if (hasNotifiedRef.current) return;
+    hasNotifiedRef.current = true;
+    onReadyRef.current?.();
+  }, [remaining]);
+
   // Format seconds as hh mm ss, always two digits, fixed width
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const hours = Math.floor(remaining / 3600);
+  const minutes = Math.floor((remaining % 3600) / 60);
+  const secs = remaining % 60;
 
   // Pad each unit to two digits
   const pad = (n: number) => n.toString().padStart(2, "0");
@@ -16,7 +56,7 @@ export function TimeToReadyCountdown({ seconds }: TimeToReadyCountdownProps) {
   return (
     <div className="mt-3 space-y-2">
       <div className="text-sm text-slate-600">
-        {seconds <= 0 ? (
+        {remaining <= 0 ? (
           <div className="text-sm text-slate-600">Ready now</div>
         ) : (
           <>

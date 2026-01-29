@@ -1,9 +1,10 @@
 import type { Prisma } from "@prisma/client";
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getRequestId, jsonError, jsonOk, startRouteSpan } from "../../../../lib/api/routeUtils";
 import { getUserId } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/db/prisma";
 import { openPack } from "../../../../lib/engine";
+import { log } from "../../../../lib/logger";
 import { masks as maskDefs } from "../../../../lib/staticData";
 import { createPrismaStore } from "../../../../lib/store/prismaStore";
 
@@ -44,15 +45,19 @@ function buildReplayResponse(pulls: any[], pityCounterAfter: number) {
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+  const span = startRouteSpan("POST /api/packs/open", requestId);
   try {
     const body = await request.json();
     const parsed = schema.parse(body);
     const { userId, isGuest } = await getUserId();
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      span.ok({ status: 401, reason: "unauthorized" });
+      return jsonError("Unauthorized", 401, requestId);
     }
     if (parsed.pack_id !== PACK_ID) {
-      return NextResponse.json({ error: "Unknown pack" }, { status: 400 });
+      span.ok({ status: 400, reason: "unknown_pack" });
+      return jsonError("Unknown pack", 400, requestId);
     }
 
     // We model pack opens as a domain event in Postgres and use
@@ -109,7 +114,9 @@ export async function POST(request: Request) {
           select: { id: true },
         });
       } catch (e) {
-        console.log("[packOpen] - race detected on idempotency key insert", e);
+        log.warn("[packOpen] race detected on idempotency key insert", {
+          requestId,
+        });
         // If another request won the race, replay from the DB.
         const raced = await tx.packOpen.findUnique({
           where: {
@@ -163,13 +170,15 @@ export async function POST(request: Request) {
       return openResult;
     });
 
-    return NextResponse.json(result);
+    span.ok({ status: 200, isGuest });
+    return jsonOk(result, requestId);
   } catch (err) {
     const statusCode =
       typeof err === "object" && err && "statusCode" in err
         ? Number((err as any).statusCode)
         : 400;
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: statusCode });
+    span.error(err, { status: statusCode });
+    return jsonError(message, statusCode, requestId);
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Mask } from "../../lib/types";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function useAllMasks() {
   const [masks, setMasks] = useState<Mask[]>([]);
@@ -9,14 +10,11 @@ export function useAllMasks() {
   useEffect(() => {
     async function fetchMasks() {
       try {
-        const res = await fetch("/api/masks");
-        if (!res.ok) {
-          throw new Error("Failed to fetch masks");
-        }
-        const data = await res.json();
+        const data = await fetchJson<{ masks: Mask[] }>("/api/masks");
         setMasks(data.masks);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        if (err instanceof ApiError) setError(err.message);
+        else setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }

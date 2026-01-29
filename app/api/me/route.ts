@@ -1,35 +1,35 @@
-import { NextResponse } from "next/server";
+import { getRequestId, jsonError, jsonOk, startRouteSpan } from "../../../lib/api/routeUtils";
 import { getUserId, setGuestCookie } from "../../../lib/auth";
 import { mePayload } from "../../../lib/engine";
 
-const GET = async () => {
+const GET = async (req: Request) => {
+  const requestId = getRequestId(req);
+  const span = startRouteSpan("GET /api/me", requestId);
   try {
-    console.log("Handling GET /api/me");
     const { userId, isGuest } = await getUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: "No userId found in GET /api/me" },
-        { status: 400 },
-      );
+      span.ok({ status: 400, reason: "missing_user" });
+      return jsonError("No userId found in GET /api/me", 400, requestId);
     }
     const payload = await mePayload(isGuest, userId);
-    return NextResponse.json(payload);
+    span.ok({ status: 200, isGuest });
+    return jsonOk(payload, requestId);
   } catch (err) {
-    console.error("Error in GET /api/me:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    span.error(err, { status: 400 });
+    return jsonError(message, 400, requestId);
   }
 };
 
 const POST = async (req: Request) => {
+  const requestId = getRequestId(req);
+  const span = startRouteSpan("POST /api/me", requestId);
   // Only create a guest user if explicitly requested
   const url = new URL(req.url);
   const guest = url.searchParams.get("guest");
   if (!guest) {
-    return NextResponse.json(
-      { error: "Guest creation not requested" },
-      { status: 400 },
-    );
+    span.ok({ status: 400, reason: "guest_not_requested" });
+    return jsonError("Guest creation not requested", 400, requestId);
   }
   try {
     // Always create a new guest user and set cookie
@@ -39,11 +39,12 @@ const POST = async (req: Request) => {
     await prismaStore.getOrCreateUser(true, userId);
     setGuestCookie(userId);
     const payload = await mePayload(true, userId);
-    return NextResponse.json(payload);
+    span.ok({ status: 200, isGuest: true });
+    return jsonOk(payload, requestId);
   } catch (err) {
-    console.error("Error in POST /api/me:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    span.error(err, { status: 400 });
+    return jsonError(message, 400, requestId);
   }
 };
 

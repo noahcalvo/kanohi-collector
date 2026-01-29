@@ -263,7 +263,7 @@ export function CollectionMaskCard({
         ) : null
       }
       popover={
-        <div className="bg-white/90 rounded-2xl px-8 pt-8 backdrop-blur-sm w-full">
+        <div className="bg-white/90 rounded-2xl px-4 pt-4 backdrop-blur-sm w-full">
           <div className="text-base font-semibold text-slate-900">
             {mask.name}
           </div>

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { createNewGuestId } from "./guestUser";
+import { log } from "./logger";
 
 export async function getUserIdOrThrow(): Promise<string> {
   const { userId } = await auth();
@@ -21,7 +22,7 @@ export async function getOrCreateUserId(): Promise<{
   if (userId) return { userId, isGuest: false, setCookie };
   // Try to get guest id from cookie
   let guestId = cookies().get(GUEST_COOKIE)?.value;
-  console.log("getUserId - guestId from cookie:", guestId);
+  log.debug("[auth] guestId from cookie", Boolean(guestId));
   if (!guestId) {
     setCookie = true;
     guestId = createNewGuestId();
@@ -37,7 +38,7 @@ export async function getUserId(): Promise<{
   if (userId) return { userId, isGuest: false };
   // Try to get guest id from cookie
   const guestId = cookies().get(GUEST_COOKIE)?.value;
-  console.log("getUserId - guestId from cookie:", guestId);
+  log.debug("[auth] guestId from cookie", Boolean(guestId));
   if (guestId) {
     return { userId: guestId, isGuest: true };
   }
@@ -48,7 +49,7 @@ export async function getUserId(): Promise<{
 export function setGuestCookie(guestId: string) {
   cookies().set(GUEST_COOKIE, guestId, {
     path: "/",
-    httpOnly: false,
+    httpOnly: true,
     sameSite: "lax",
   });
 }
