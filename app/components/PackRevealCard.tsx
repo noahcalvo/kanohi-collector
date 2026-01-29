@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
+import { useTapGuard } from "../hooks/useTapGuard";
 import type { EquipSlot, DrawResultItem } from "../../lib/types";
 import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";
@@ -117,6 +118,7 @@ export function PackRevealCard(props: {
   } = props;
 
   const [showEquipPopup, setShowEquipPopup] = useState(false);
+  const equipTapGuard = useTapGuard();
   const rarity = rarityClasses(item.rarity);
   const showMythicRain = alreadySeen === true && item.rarity === "MYTHIC";
   const showMythicBurst =
@@ -297,6 +299,10 @@ export function PackRevealCard(props: {
                   <button
                     className="py-1 rounded-md font-semibold bg-gray-300 text-xs px-6 cursor-pointer text-slate-900 hover:bg-white hover:scale-[1.03] transition transform disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => setShowEquipPopup(!showEquipPopup)}
+                    onClickCapture={equipTapGuard.onClickCapture}
+                    onPointerDown={equipTapGuard.onPointerDown}
+                    onPointerMove={equipTapGuard.onPointerMove}
+                    onPointerCancel={equipTapGuard.onPointerCancel}
                     disabled={!!equipping}
                   >
                     {equipping ? "Equipping…" : "Equip Mask"}

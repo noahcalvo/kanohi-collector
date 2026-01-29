@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTapGuard } from "../hooks/useTapGuard";
 import {
   buffPercent,
   getBuffDescription,
@@ -249,6 +250,7 @@ export function CollectionMaskCard({
   } | null;
 }) {
   const [showEquipPopup, setShowEquipPopup] = useState(false);
+  const equipTapGuard = useTapGuard();
   const busy = Boolean(equipping) || Boolean(changing);
 
   const displayColor =
@@ -327,6 +329,10 @@ export function CollectionMaskCard({
           type="button"
           className="w-full button-primary text-sm py-2"
           onClick={() => setShowEquipPopup(!showEquipPopup)}
+          onClickCapture={equipTapGuard.onClickCapture}
+          onPointerDown={equipTapGuard.onPointerDown}
+          onPointerMove={equipTapGuard.onPointerMove}
+          onPointerCancel={equipTapGuard.onPointerCancel}
           disabled={busy}
         >
           {equipping ? "Equipping…" : "Equip Mask"}
