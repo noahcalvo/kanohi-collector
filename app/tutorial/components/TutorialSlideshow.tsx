@@ -32,6 +32,16 @@ function getPointerClientXY(e: React.PointerEvent) {
 
 const SWIPE_MIN_DISTANCE_PX = 44;
 const SWIPE_HORIZONTAL_RATIO = 1.2;
+const TAP_MAX_MOVEMENT_PX = 14;
+
+function isInteractiveEventTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(
+    target.closest(
+      "a,button,input,textarea,select,summary,[role='button'],[role='link']",
+    ),
+  );
+}
 
 export function TutorialSlideshow(props: {
   stepKey: string;
@@ -45,6 +55,9 @@ export function TutorialSlideshow(props: {
   const busy = props.busy;
   const onCompleteRecord = props.onCompleteRecord;
 
+  // Used to give immediate UX feedback when the last slide advances the server step.
+  const [finishingStep, setFinishingStep] = useState(false);
+
   const slides = useMemo<TutorialSlide[]>(() => {
     const incoming = props.copy.slides ?? [];
     return incoming.length
@@ -56,7 +69,13 @@ export function TutorialSlideshow(props: {
 
   useEffect(() => {
     setIndex(0);
+    setFinishingStep(false);
   }, [props.stepKey]);
+
+  useEffect(() => {
+    if (!props.error) return;
+    setFinishingStep(false);
+  }, [props.error]);
 
   const safeIndex = Math.min(index, Math.max(0, slides.length - 1));
   const isLast = safeIndex >= slides.length - 1;
@@ -70,13 +89,15 @@ export function TutorialSlideshow(props: {
   }, []);
 
   const goNext = useCallback(() => {
-    if (busy) return;
+    if (busy || finishingStep) return;
     if (!isLast) {
       setIndex((i) => Math.min(slides.length - 1, i + 1));
       return;
     }
+
+    setFinishingStep(true);
     onCompleteRecord();
-  }, [busy, isLast, onCompleteRecord, slides.length]);
+  }, [busy, finishingStep, isLast, onCompleteRecord, slides.length]);
 
   const [overlaySwipe, setOverlaySwipe] = useState<SwipeState>(() =>
     createInitialSwipeState(),
@@ -145,7 +166,9 @@ export function TutorialSlideshow(props: {
         if (dx < 0) goNext();
         else goBack();
       } else if (behavior === "tap-advances") {
-        goNext();
+        const isTapLike =
+          absDx <= TAP_MAX_MOVEMENT_PX && absDy <= TAP_MAX_MOVEMENT_PX;
+        if (isTapLike && !isInteractiveEventTarget(e.target)) goNext();
       }
 
       setSwipe(createInitialSwipeState());
@@ -208,6 +231,7 @@ export function TutorialSlideshow(props: {
   return (
     <div
       className="fixed inset-0 z-50 h-[100dvh] w-[100dvw] select-none"
+      style={{ touchAction: "pan-y" }}
       onPointerDown={(e) => handleSwipePointerDown(e, setOverlaySwipe)}
       onPointerMove={(e) =>
         handleSwipePointerMove(e, overlaySwipe, setOverlaySwipe)
@@ -272,7 +296,8 @@ export function TutorialSlideshow(props: {
                     duration: 0.7,
                     ease: "easeOut",
                   }}
-                  className="w-full max-h-full overflow-auto overscroll-contain rounded-3xl p-4 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md sm:p-9"
+                  className="relative w-full max-h-full overflow-auto overscroll-contain rounded-3xl p-4 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md sm:p-9"
+                  style={{ touchAction: "pan-y" }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                     handleSwipePointerDown(e, setCardSwipe);
@@ -287,7 +312,7 @@ export function TutorialSlideshow(props: {
                       e,
                       cardSwipe,
                       setCardSwipe,
-                      "tap-ignored",
+                      "tap-advances",
                     );
                   }}
                   onPointerCancel={(e) => {
@@ -320,6 +345,18 @@ export function TutorialSlideshow(props: {
                       </div>
                     ) : null}
                   </div>
+
+                  {(busy || finishingStep) && isLast ? (
+                    <div
+                      className="pointer-events-none absolute inset-0 rounded-3xl bg-black/25 backdrop-blur-[1px] flex items-center justify-center"
+                      aria-hidden
+                    >
+                      <div className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm text-white/90">
+                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                        <div className="font-medium tracking-tight">Continuing…</div>
+                      </div>
+                    </div>
+                  ) : null}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -327,7 +364,6 @@ export function TutorialSlideshow(props: {
 
           <div
             className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70"
-            onPointerUp={(e) => e.stopPropagation()}
           >
             <div>
               {Array.from({ length: slides.length }).map((_, i) => (
@@ -340,8 +376,8 @@ export function TutorialSlideshow(props: {
                 />
               ))}
             </div>
-            <div className="animate-pulse">
-              {footerCta}
+            <div className={busy || finishingStep ? "opacity-80" : "animate-pulse"}>
+              {busy || finishingStep ? "Continuing…" : footerCta}
             </div>
           </div>
         </div>
