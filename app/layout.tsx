@@ -12,7 +12,15 @@ const voyanui = localFont({
 
 export const metadata: Metadata = {
   title: "Kanohi Collector",
-  description: "Mask collection MVP",
+  description: "Bionicle Mask Collecting Game",
+  applicationName: "Kanohi Collector",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Kanohi Collector",
+  },
+  themeColor: "#000000",
+
 };
 
 export default function RootLayout({
