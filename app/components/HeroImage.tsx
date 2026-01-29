@@ -28,8 +28,11 @@ export function HeroImage({
   showBaseHead?: boolean; // Whether to show the base head underneath the mask
 }) {
   const [hidden, setHidden] = useState(false);
+  const [maskReady, setMaskReady] = useState(false);
 
   const src = useMemo(() => heroSrc(maskId), [maskId]);
+
+  const maskPngSrc = useMemo(() => `/masks/${maskId}.png`, [maskId]);
 
   // If color is provided, use ColoredMask component
   if (color) {
@@ -41,10 +44,29 @@ export function HeroImage({
       <div
         className={`relative ${sizeClass}`}
         style={{
-          filter:
-            "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.23))",
+          filter: maskReady
+            ? "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.23))"
+            : "none",
+          transform: "translateZ(0)",
+          willChange: "transform",
+          backfaceVisibility: "hidden",
         }}
       >
+        {/*
+          iOS Safari sometimes computes drop-shadow before the CSS mask is ready
+          (and caches the rectangular raster). Preload the mask asset and only
+          enable drop-shadow once it has loaded.
+        */}
+        <Image
+          src={maskPngSrc}
+          alt=""
+          fill
+          className="absolute inset-0 opacity-0 pointer-events-none"
+          draggable={false}
+          priority={false}
+          onLoadingComplete={() => setMaskReady(true)}
+          onError={() => setMaskReady(true)}
+        />
         {showBaseHead && (
           <>
             {/* Layer 1: Eyes with color - bottom */}

@@ -1,4 +1,5 @@
-import React from "react";
+import Image from "next/image";
+import React, { useMemo, useState } from "react";
 import { ColoredMask } from "./ColoredMask";
 
 interface ColoredMaskWithGlowProps {
@@ -19,8 +20,31 @@ export function ColoredMaskWithGlow({
   alt,
   transparent,
 }: ColoredMaskWithGlowProps) {
+  const [maskReady, setMaskReady] = useState(false);
+  const maskPngSrc = useMemo(() => `/masks/${maskId}.png`, [maskId]);
+
   return (
-    <div className="relative" style={{ filter: "drop-shadow(0 0 12px rgba(255, 255, 255, 0.4))" }}>
+    <div
+      className="relative"
+      style={{
+        filter: maskReady
+          ? "drop-shadow(0 0 12px rgba(255, 255, 255, 0.4))"
+          : "none",
+        transform: "translateZ(0)",
+        willChange: "transform",
+        backfaceVisibility: "hidden",
+      }}
+    >
+      <Image
+        src={maskPngSrc}
+        alt=""
+        fill
+        className="absolute inset-0 opacity-0 pointer-events-none"
+        draggable={false}
+        priority={false}
+        onLoadingComplete={() => setMaskReady(true)}
+        onError={() => setMaskReady(true)}
+      />
       <ColoredMask
         maskId={maskId}
         color={color}
