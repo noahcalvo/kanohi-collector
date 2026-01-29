@@ -84,17 +84,21 @@ export function createPrismaStore(
     );
 
     // Ensure the default pack progress exists so new users can play immediately.
-    await client.userPackProgress.upsert({
-      where: { userId_packId: { userId: user.id, packId: "free_daily_v1" } },
-      create: {
-        userId: user.id,
-        packId: "free_daily_v1",
-        fractionalUnits: PACK_UNITS_PER_PACK,
-        pityCounter: 0,
-        lastUnitTs: new Date(),
-        lastPackClaimTs: null,
-      },
-      update: {},
+    // NOTE: Prisma `upsert` can still surface unique-constraint races under
+    // concurrent first-load requests (e.g. account upgrade + page data fetch).
+    // `createMany(..., skipDuplicates: true)` is safe and we don't need to update.
+    await client.userPackProgress.createMany({
+      data: [
+        {
+          userId: user.id,
+          packId: "free_daily_v1",
+          fractionalUnits: PACK_UNITS_PER_PACK,
+          pityCounter: 0,
+          lastUnitTs: new Date(),
+          lastPackClaimTs: null,
+        },
+      ],
+      skipDuplicates: true,
     });
 
     return toUser(user);

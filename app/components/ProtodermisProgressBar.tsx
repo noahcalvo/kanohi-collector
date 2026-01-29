@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { DrawResultItem } from "../../lib/types";
 
 export function ProtodermisProgressBar({
@@ -7,17 +8,19 @@ export function ProtodermisProgressBar({
   displayLevel,
   displayEssence,
   mythicHighlight,
+  actions,
 }: {
   item: DrawResultItem;
   displayLevel: number;
   displayEssence: number;
   mythicHighlight?: boolean;
+  actions?: ReactNode;
 }) {
   return (
     <div className="mt-4 space-y-1.5 relative">
       <div
         className={
-          "flex items-center justify-between text-xs " +
+          "relative flex items-center text-xs min-h-[28px] " +
           (mythicHighlight ? " font-bold text-slate-300" : "text-slate-600")
         }
       >
@@ -48,7 +51,12 @@ export function ProtodermisProgressBar({
             <span>Level {displayLevel}</span>
           )}
         </span>
-        <span>
+        {actions && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-[70]">
+            {actions}
+          </div>
+        )}
+        <span className="ml-auto text-right">
           {item.essence_awarded > 0
             ? `+${item.essence_awarded} protodermis`
             : ""}

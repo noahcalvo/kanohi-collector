@@ -14,7 +14,6 @@ type TutorialProgressRow = {
   rareMaskGrantedAt: Date | null;
   rareMaskMaskId: string | null;
 
-  starterPackGrantedAt: Date | null;
   starterPackClientRequestId: string | null;
   starterPackOpenedAt: Date | null;
 
@@ -32,7 +31,6 @@ export function toProgressLike(row: TutorialProgressRow) {
     currentStep: toLiteralStep(row.currentStep),
     completedAt: row.completedAt,
     rareMaskGrantedAt: row.rareMaskGrantedAt,
-    starterPackGrantedAt: row.starterPackGrantedAt,
     starterPackOpenedAt: row.starterPackOpenedAt,
     accountPromptShownAt: row.accountPromptShownAt,
   };
@@ -86,7 +84,6 @@ export function computeTutorialStateForResponse(
     completed_at: row.completedAt,
     rare_mask_granted_at: row.rareMaskGrantedAt,
     rare_mask_mask_id: row.rareMaskMaskId,
-    starter_pack_granted_at: row.starterPackGrantedAt,
     starter_pack_opened_at: row.starterPackOpenedAt,
     starter_pack_client_request_id: row.starterPackClientRequestId,
     account_prompt_shown_at: row.accountPromptShownAt,

@@ -214,6 +214,7 @@ export function EquippedMaskCard({
 
 export function CollectionMaskCard({
   mask,
+  selectedColor,
   onEquip,
   equipping,
   onChangeColor,
@@ -222,6 +223,7 @@ export function CollectionMaskCard({
   currentTuragaEquipped,
 }: {
   mask: CollectionMask;
+  selectedColor?: string;
   onEquip: (
     maskId: string,
     slot: EquipSlot,
@@ -247,6 +249,9 @@ export function CollectionMaskCard({
   } | null;
 }) {
   const [showEquipPopup, setShowEquipPopup] = useState(false);
+
+  const displayColor =
+    selectedColor ?? mask.equipped_color ?? mask.unlocked_colors[0];
 
   return (
     <ArtCard
@@ -292,7 +297,7 @@ export function CollectionMaskCard({
         <HeroImage
           maskId={mask.mask_id}
           alt={mask.name}
-          color={(mask as any).equipped_color || mask.unlocked_colors[0]}
+          color={displayColor}
           transparent={mask.transparent}
           maskOffsetY={mask.offsetY}
         />
@@ -305,10 +310,10 @@ export function CollectionMaskCard({
         />
       </div>
       {/* Inline unlocked color picker with undiscovered indicator */}
-      <div className="mt-3 flex justify-center">
+      <div className="mt-3 flex justify-center" data-popover-suppress="true">
         <InlineColorRow
           unlockedColors={mask.unlocked_colors}
-          currentColor={(mask as any).equipped_color}
+          currentColor={displayColor}
           onSelectColor={onChangeColor || (() => {})}
           isChanging={changing === mask.mask_id}
           maskId={mask.mask_id}
@@ -331,7 +336,7 @@ export function CollectionMaskCard({
               {
                 mask_id: mask.mask_id,
                 name: mask.name,
-                color: (mask as any).equipped_color || mask.unlocked_colors[0],
+                color: displayColor,
                 transparent: mask.transparent,
                 offsetY: mask.offsetY,
               } as DrawResultItem

@@ -4,9 +4,34 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TutorialCopyBlock } from "@/lib/tutorial/copy";
 
-type Slide =
-  | { kind: "quote"; text: string; source: string }
-  | { kind: "text"; text: string };
+type TutorialSlide = NonNullable<TutorialCopyBlock["slides"]>[number];
+
+type SwipeState = {
+  pointerId: number | null;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  didSwipe: boolean;
+};
+
+function createInitialSwipeState(): SwipeState {
+  return {
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+    didSwipe: false,
+  };
+}
+
+function getPointerClientXY(e: React.PointerEvent) {
+  return { x: e.clientX, y: e.clientY };
+}
+
+const SWIPE_MIN_DISTANCE_PX = 44;
+const SWIPE_HORIZONTAL_RATIO = 1.2;
 
 export function TutorialSlideshow(props: {
   stepKey: string;
@@ -20,31 +45,12 @@ export function TutorialSlideshow(props: {
   const busy = props.busy;
   const onCompleteRecord = props.onCompleteRecord;
 
-  const slides = useMemo<Slide[]>(() => {
-    const result: Slide[] = [];
-
-    const quotes = props.copy.quotes ?? [];
-    const body = props.copy.body ?? [];
-
-    let quoteIndex = 0;
-    let bodyIndex = 0;
-
-    while (quoteIndex < quotes.length || bodyIndex < body.length) {
-      if (quoteIndex < quotes.length) {
-        const q = quotes[quoteIndex];
-        result.push({ kind: "quote", text: q.text, source: q.source });
-        quoteIndex += 1;
-      }
-
-      if (bodyIndex < body.length) {
-        const paragraph = body[bodyIndex];
-        result.push({ kind: "text", text: paragraph });
-        bodyIndex += 1;
-      }
-    }
-
-    return result.length ? result : [{ kind: "text", text: "" }];
-  }, [props.copy.body, props.copy.quotes]);
+  const slides = useMemo<TutorialSlide[]>(() => {
+    const incoming = props.copy.slides ?? [];
+    return incoming.length
+      ? incoming
+      : [{ quote: "", source: "", body: "" } satisfies TutorialSlide];
+  }, [props.copy.slides]);
 
   const [index, setIndex] = useState(0);
 
@@ -57,7 +63,7 @@ export function TutorialSlideshow(props: {
   const current =
     slides[safeIndex] ??
     slides[slides.length - 1] ??
-    ({ kind: "text", text: "" } satisfies Slide);
+    ({ quote: "", source: "", body: "" } satisfies TutorialSlide);
 
   const goBack = useCallback(() => {
     setIndex((i) => Math.max(0, i - 1));
@@ -71,6 +77,93 @@ export function TutorialSlideshow(props: {
     }
     onCompleteRecord();
   }, [busy, isLast, onCompleteRecord, slides.length]);
+
+  const [overlaySwipe, setOverlaySwipe] = useState<SwipeState>(() =>
+    createInitialSwipeState(),
+  );
+  const [cardSwipe, setCardSwipe] = useState<SwipeState>(() =>
+    createInitialSwipeState(),
+  );
+
+  const handleSwipePointerDown = useCallback(
+    (
+      e: React.PointerEvent,
+      setSwipe: React.Dispatch<React.SetStateAction<SwipeState>>,
+    ) => {
+      const { x, y } = getPointerClientXY(e);
+
+      setSwipe({
+        pointerId: e.pointerId,
+        startX: x,
+        startY: y,
+        lastX: x,
+        lastY: y,
+        didSwipe: false,
+      });
+
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {
+        // ignore - pointer capture isn't always available
+      }
+    },
+    [],
+  );
+
+  const handleSwipePointerMove = useCallback(
+    (
+      e: React.PointerEvent,
+      swipe: SwipeState,
+      setSwipe: React.Dispatch<React.SetStateAction<SwipeState>>,
+    ) => {
+      if (swipe.pointerId == null || e.pointerId !== swipe.pointerId) return;
+      const { x, y } = getPointerClientXY(e);
+      setSwipe((prev) => ({ ...prev, lastX: x, lastY: y }));
+    },
+    [],
+  );
+
+  const handleSwipePointerUp = useCallback(
+    (
+      e: React.PointerEvent,
+      swipe: SwipeState,
+      setSwipe: React.Dispatch<React.SetStateAction<SwipeState>>,
+      behavior: "tap-advances" | "tap-ignored",
+    ) => {
+      if (swipe.pointerId == null || e.pointerId !== swipe.pointerId) return;
+      const dx = swipe.lastX - swipe.startX;
+      const dy = swipe.lastY - swipe.startY;
+
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      const isHorizontalSwipe =
+        absDx >= SWIPE_MIN_DISTANCE_PX &&
+        absDx >= absDy * SWIPE_HORIZONTAL_RATIO;
+
+      if (isHorizontalSwipe) {
+        setSwipe((prev) => ({ ...prev, didSwipe: true }));
+        if (dx < 0) goNext();
+        else goBack();
+      } else if (behavior === "tap-advances") {
+        goNext();
+      }
+
+      setSwipe(createInitialSwipeState());
+    },
+    [goBack, goNext],
+  );
+
+  const handleSwipePointerCancel = useCallback(
+    (
+      e: React.PointerEvent,
+      swipe: SwipeState,
+      setSwipe: React.Dispatch<React.SetStateAction<SwipeState>>,
+    ) => {
+      if (swipe.pointerId == null || e.pointerId !== swipe.pointerId) return;
+      setSwipe(createInitialSwipeState());
+    },
+    [],
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -108,21 +201,32 @@ export function TutorialSlideshow(props: {
     ? (props.copy.finalCta ?? "Click to continue")
     : "Click to continue";
 
-  const footerHint = isLast ? "\u2190 Back / \u2192 Continue" : "\u2190 Back / \u2192 Next";
+  const footerHint = isLast
+    ? "\u2190 Back / \u2192 Continue"
+    : "\u2190 Back / \u2192 Next";
 
   return (
     <div
-      className="relative h-full w-full select-none"
-      onPointerUp={() => goNext()}
+      className="fixed inset-0 z-50 h-[100dvh] w-[100dvw] select-none"
+      onPointerDown={(e) => handleSwipePointerDown(e, setOverlaySwipe)}
+      onPointerMove={(e) =>
+        handleSwipePointerMove(e, overlaySwipe, setOverlaySwipe)
+      }
+      onPointerUp={(e) =>
+        handleSwipePointerUp(e, overlaySwipe, setOverlaySwipe, "tap-advances")
+      }
+      onPointerCancel={(e) =>
+        handleSwipePointerCancel(e, overlaySwipe, setOverlaySwipe)
+      }
       aria-label="Tutorial slideshow"
     >
-      <div className="relative h-full w-full px-5 py-10 sm:px-8 sm:py-12">
-        <div className="mx-auto flex h-full w-full max-w-2xl flex-col justify-center">
-          <header className="mb-6 space-y-1 flex flex-col items-center md:block">
+      <div className="relative flex h-full w-full flex-col px-5 pt-10 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-12">
+        <div className="mx-auto grid h-full w-full max-w-2xl grid-rows-[auto,minmax(0,1fr),auto]">
+          <header className="space-y-1 flex flex-col items-center md:block">
             <div className="text-xs uppercase tracking-widest text-slate-300/70">
               Tutorial • {props.stepLabel}
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight text-white">
+            <h2 className="text-3xl font-semibold tracking-tight text-white text-center md:text-left">
               {props.copy.heading}
             </h2>
             {/* {props.copy.subheading ? (
@@ -133,7 +237,7 @@ export function TutorialSlideshow(props: {
 
             {props.reviewMode ? (
               <div className="pt-2 text-xs text-slate-300/70">
-                Review mode — progress and rewards are not granted.
+                Review mode — rewards are not granted.
               </div>
             ) : null}
 
@@ -144,54 +248,87 @@ export function TutorialSlideshow(props: {
             ) : null}
           </header>
 
-          <div className="relative min-h-[120px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={safeIndex}
-                initial={{
-                  opacity: 0,
-                  y: 18,
-                  filter: "blur(6px)",
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  filter: "blur(0px)",
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -12,
-                  filter: "blur(8px)",
-                }}
-                transition={{
-                  duration: 0.7,
-                  ease: "easeOut",
-                }}
-                className="h-60 rounded-3xl p-7 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md sm:p-9"
-              >
-                {current.kind === "quote" ? (
-                  <figure className="space-y-4">
-                    <motion.blockquote
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2, duration: 0.8 }}
-                      className="tutorial-drift text-lg italic tracking-wide text-slate-100"
-                    >
-                      “{current.text}”
-                    </motion.blockquote>
+          <div className="min-h-0 flex items-center py-6">
+            <div className="relative min-h-0 w-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={safeIndex}
+                  initial={{
+                    opacity: 0,
+                    y: 18,
+                    filter: "blur(6px)",
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    filter: "blur(0px)",
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: -12,
+                    filter: "blur(8px)",
+                  }}
+                  transition={{
+                    duration: 0.7,
+                    ease: "easeOut",
+                  }}
+                  className="w-full max-h-full overflow-auto overscroll-contain rounded-3xl p-4 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md sm:p-9"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    handleSwipePointerDown(e, setCardSwipe);
+                  }}
+                  onPointerMove={(e) => {
+                    e.stopPropagation();
+                    handleSwipePointerMove(e, cardSwipe, setCardSwipe);
+                  }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    handleSwipePointerUp(
+                      e,
+                      cardSwipe,
+                      setCardSwipe,
+                      "tap-ignored",
+                    );
+                  }}
+                  onPointerCancel={(e) => {
+                    e.stopPropagation();
+                    handleSwipePointerCancel(e, cardSwipe, setCardSwipe);
+                  }}
+                >
+                  <div className="space-y-6">
+                    <figure className="space-y-4">
+                      <motion.blockquote
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.15, duration: 0.8 }}
+                        className="tutorial-drift text-lg italic tracking-wide text-slate-100"
+                      >
+                        “{current.quote}”
+                      </motion.blockquote>
 
-                    <figcaption className="text-xs text-slate-300/70">
-                      {current.source}
-                    </figcaption>
-                  </figure>
-                ) : (
-                  <div className="whitespace-pre-line text-lg leading-relaxed text-slate-100" dangerouslySetInnerHTML={{ __html: current.text }}/>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                      <figcaption className="text-xs text-slate-300/70">
+                        {current.source}
+                      </figcaption>
+                    </figure>
+
+                    {current.body ? (
+                      <div className="border-t border-white/10 pt-6">
+                        <div
+                          className="text-lg leading-relaxed text-slate-100/60 [&_p]:mb-3 [&_p:last-child]:mb-0"
+                          dangerouslySetInnerHTML={{ __html: current.body }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
-          <div className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70">
+          <div
+            className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70"
+            onPointerUp={(e) => e.stopPropagation()}
+          >
             <div>
               {Array.from({ length: slides.length }).map((_, i) => (
                 <span
@@ -204,7 +341,7 @@ export function TutorialSlideshow(props: {
               ))}
             </div>
             <div className="animate-pulse">
-              {footerCta} • {footerHint}
+              {footerCta}
             </div>
           </div>
         </div>

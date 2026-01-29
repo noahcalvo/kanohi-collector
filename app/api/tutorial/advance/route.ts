@@ -9,7 +9,6 @@ import {
   lockTutorialProgress,
   tutorialKeySchema,
   upsertTutorialProgress,
-  toProgressLike,
 } from "@/lib/tutorial/server";
 import { computeNextStep } from "@/lib/tutorial/stepEngine";
 
@@ -38,18 +37,24 @@ export async function POST(req: Request) {
         where: { id: base.id },
       });
 
-      const progressLike = toProgressLike(locked);
       const reviewMode = Boolean(locked.completedAt);
       const rareGranted = Boolean(locked.rareMaskGrantedAt);
-      const packGranted = Boolean(locked.starterPackGrantedAt);
+      const packOpened = Boolean(locked.starterPackOpenedAt);
 
       const effective = computeTutorialStateForResponse(locked, actor.isGuest);
-      const nextStep = computeNextStep(effective.effective_step, {
+      const computedNextStep = computeNextStep(effective.effective_step, {
         isGuest: actor.isGuest,
         reviewMode,
         rareGranted,
-        packGranted,
+        packOpened,
       });
+
+      // Review mode: if the user is viewing the mask selection step, advance should
+      // always land on the starter pack step (even though nothing is granted).
+      const nextStep =
+        reviewMode && effective.effective_step === "CHOOSE_RARE_MASK"
+          ? "OPEN_STARTER_PACK"
+          : computedNextStep;
 
       const now = new Date();
       const updates: any = {

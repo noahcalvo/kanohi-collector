@@ -56,7 +56,6 @@ model TutorialProgress {
   rareMaskGrantedAt      DateTime?
   rareMaskMaskId         String?
 
-  starterPackGrantedAt   DateTime?
   starterPackClientRequestId String?
   starterPackOpenedAt    DateTime?
 

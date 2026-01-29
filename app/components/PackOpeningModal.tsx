@@ -58,6 +58,43 @@ export function PackOpeningModal(props: {
   useEffect(() => {
     if (!open) return;
 
+    const body = document.body;
+    const html = document.documentElement;
+
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPosition = body.style.position;
+    const prevBodyTop = body.style.top;
+    const prevBodyWidth = body.style.width;
+    const prevBodyPaddingRight = body.style.paddingRight;
+    const prevHtmlOverflow = html.style.overflow;
+
+    const scrollY = window.scrollY;
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
+
+    // Prevent background scroll (including iOS overscroll) while the modal is open.
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.position = prevBodyPosition;
+      body.style.top = prevBodyTop;
+      body.style.width = prevBodyWidth;
+      body.style.paddingRight = prevBodyPaddingRight;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== " " && e.key !== "Spacebar") return;
       e.preventDefault();
@@ -90,7 +127,7 @@ export function PackOpeningModal(props: {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex sm:items-center justify-center p-6 bg-zinc-900/100 backdrop-blur-sm overflow-hidden h-[100dvh]"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black backdrop-blur-sm overflow-hidden h-[100dvh]"
       role="dialog"
       aria-modal="true"
       aria-label="Pack opening"
@@ -119,7 +156,7 @@ export function PackOpeningModal(props: {
           </div>
         )}
 
-        <div className="mt-6 flex flex-col items-center pb-4">
+        <div className="flex flex-col items-center pb-4">
           {!showFirstOnly && !showSecondOnly && !showBoth && (
             <>
               {stage === "waiting" ? (

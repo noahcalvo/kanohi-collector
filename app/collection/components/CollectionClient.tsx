@@ -33,7 +33,7 @@ export function CollectionClient({
   // Optionally, track which color picker is open, or expose a handler to update color
 
   const [expandedGenerations, setExpandedGenerations] = useState<Set<number>>(
-    new Set([]),
+    new Set([1]),
   );
   const [isStatsExpanded, setIsStatsExpanded] = useState(false);
 

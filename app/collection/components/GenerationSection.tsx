@@ -14,6 +14,7 @@ export function GenerationSection({
   onEquip,
   equipping,
   onChangeColor,
+  maskColors,
   currentToaEquipped,
   currentTuragaEquipped,
 }: {
@@ -117,6 +118,7 @@ export function GenerationSection({
                           ...m,
                           name: maskNameById.get(m.mask_id) ?? m.name,
                         }}
+                        selectedColor={maskColors[m.mask_id]}
                         onEquip={onEquip}
                         equipping={equipping}
                         onChangeColor={onChangeColor}

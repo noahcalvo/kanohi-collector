@@ -1,19 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ColoredMaskWithGlow } from "@/app/components/ColoredMaskWithGlow";
 import { PackOpeningModal } from "@/app/components/PackOpeningModal";
 import type { PackOverlayStage } from "@/app/components/PackOpeningModal";
+import { ClaimGreatMaskSection } from "@/app/tutorial/components/ClaimGreatMaskSection";
+import { CreateAccountSection } from "@/app/tutorial/components/CreateAccountSection";
+import { OpenStarterPackSection } from "@/app/tutorial/components/OpenStarterPackSection";
 import { TutorialSlideshow } from "@/app/tutorial/components/TutorialSlideshow";
 import type { TutorialStep } from "@/lib/tutorial/constants";
 import { TUTORIAL_COPY } from "@/lib/tutorial/copy";
-import {
-  getStarterMaskRenderInfo,
-  isStarterMaskId,
-  STARTER_MASK_IDS,
-} from "@/lib/tutorial/starterMasks";
+import { STARTER_MASK_IDS } from "@/lib/tutorial/starterMasks";
 import type { OpenResult } from "@/lib/types";
 
 type ProgressResponse = {
@@ -28,7 +25,6 @@ type ProgressResponse = {
   completed_at: string | null;
   rare_mask_granted_at: string | null;
   rare_mask_mask_id: string | null;
-  starter_pack_granted_at: string | null;
   starter_pack_opened_at: string | null;
   starter_pack_client_request_id: string | null;
   account_prompt_shown_at: string | null;
@@ -39,9 +35,21 @@ type ProgressResponse = {
 export default function TutorialPage() {
   const router = useRouter();
 
+  const [leavingToHome, setLeavingToHome] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setPrefersReducedMotion(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
+  const [screenBusy, setScreenBusy] = useState(false);
 
   // Pack opening overlay (reusing existing modal)
   const [packOverlayOpen, setPackOverlayOpen] = useState(false);
@@ -86,20 +94,34 @@ export default function TutorialPage() {
     didCompleteRef.current = true;
 
     (async () => {
+      let target = "/";
       try {
-        await fetch("/api/tutorial/complete", {
+        const res = await fetch("/api/tutorial/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({}),
         });
+
+        if (res.ok) {
+          const data = (await res.json().catch(() => null)) as
+            | { first_time_completed?: boolean }
+            | null;
+          if (data?.first_time_completed) target = "/?npe=collection-tip";
+        }
       } finally {
-        router.replace("/");
+        setLeavingToHome(true);
+        if (!prefersReducedMotion) {
+          await new Promise((r) => setTimeout(r, 320));
+        }
+        router.replace(target);
       }
     })();
-  }, [effectiveStep, router]);
+  }, [effectiveStep, prefersReducedMotion, router]);
 
   const advance = useCallback(async () => {
+    if (screenBusy) return;
     setError(null);
+    setScreenBusy(true);
     const res = await fetch("/api/tutorial/advance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -107,10 +129,15 @@ export default function TutorialPage() {
     });
     if (!res.ok) {
       setError("Could not advance tutorial");
+      setScreenBusy(false);
       return;
     }
-    await refresh();
-  }, [refresh]);
+    try {
+      await refresh();
+    } finally {
+      setScreenBusy(false);
+    }
+  }, [refresh, screenBusy]);
 
   const [advancingIntro, setAdvancingIntro] = useState(false);
 
@@ -125,7 +152,7 @@ export default function TutorialPage() {
   }, [advance, advancingIntro]);
 
   const claimMask = useCallback(
-    async (maskId: string) => {
+    async (maskId: string): Promise<boolean> => {
       setError(null);
       const res = await fetch("/api/tutorial/claim-rare-mask", {
         method: "POST",
@@ -134,26 +161,13 @@ export default function TutorialPage() {
       });
       if (!res.ok) {
         setError("Could not claim mask");
-        return;
+        return false;
       }
       await refresh();
+      return true;
     },
     [refresh],
   );
-
-  const grantStarterPack = useCallback(async () => {
-    setError(null);
-    const res = await fetch("/api/tutorial/grant-starter-pack", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      setError("Could not grant starter pack");
-      return;
-    }
-    await refresh();
-  }, [refresh]);
 
   const closePackOverlay = useCallback(() => {
     const canClose = packOverlayStage === "done" || packOverlayStage === "error";
@@ -166,7 +180,8 @@ export default function TutorialPage() {
   }, [packOverlayStage]);
 
   const advancePackOverlay = useCallback(() => {
-    if (packOverlayStage === "revealing_first") setPackOverlayStage("revealing_second");
+    if (packOverlayStage === "revealing_first")
+      setPackOverlayStage("revealing_second");
     else if (packOverlayStage === "revealing_second")
       setPackOverlayStage("revealing_both");
   }, [packOverlayStage]);
@@ -188,11 +203,6 @@ export default function TutorialPage() {
   }, [packOverlayAnimationDone, packOverlayOpen, packOverlayStage, packResults]);
 
   const openStarterPack = useCallback(async () => {
-    // Ensure pack was granted first.
-    if (!progress?.starter_pack_granted_at) {
-      await grantStarterPack();
-    }
-
     // Reset overlay.
     packOverlayTimeoutsRef.current.forEach(clearTimeout);
     packOverlayTimeoutsRef.current = [];
@@ -231,7 +241,7 @@ export default function TutorialPage() {
     }
     setPackResults(data.results);
     await refresh();
-  }, [advance, closePackOverlay, grantStarterPack, progress, refresh]);
+  }, [advance, closePackOverlay, refresh]);
 
   const starterMaskIds = useMemo(
     () => progress?.starter_mask_ids ?? STARTER_MASK_IDS,
@@ -267,7 +277,29 @@ export default function TutorialPage() {
   }
 
   return (
-    <main className="fixed inset-0 z-[1000] bg-black text-slate-100 px-6 py-10 sm:py-14 overflow-y-auto">
+    <main className="fixed inset-0 z-[1000] bg-black text-slate-100">
+      <div
+        aria-hidden
+        className={
+          "fixed inset-0 z-[2000] pointer-events-none transition-opacity duration-300 " +
+          (leavingToHome ? "opacity-100" : "opacity-0")
+        }
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100" />
+      </div>
+
+      {screenBusy && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-blur-sm bg-black/50">
+          <div className="absolute inset-0" />
+          <div className="relative mx-auto w-full max-w-sm rounded-3xl p-6 text-center">
+            <div className="mx-auto h-10 w-10 rounded-full border-2 border-white/15 border-t-white/80 animate-spin" />
+            <div className="mt-4 text-base font-semibold tracking-tight text-white">
+              Updating…
+            </div>
+          </div>
+        </div>
+      )}
+
       <PackOpeningModal
         open={packOverlayOpen}
         stage={packOverlayStage}
@@ -277,207 +309,42 @@ export default function TutorialPage() {
         onAdvance={advancePackOverlay}
       />
 
-      <div className="mx-auto w-full max-w-2xl space-y-6">
-        <header className="space-y-2">
-          <div className="text-xs text-slate-300/70 uppercase tracking-widest">
-            Tutorial • Bionicle Origins
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-            Bionicle Origins
-          </h1>
-          {reviewMode && (
-            <div className="text-sm text-slate-200/75">
-              Welcome back. This is a non-rewarding review run.
+      <div className="min-h-full flex items-center justify-center px-6 py-10 sm:py-14">
+        <div className="mx-auto w-full max-w-2xl space-y-6">
+          {error && (
+            <div className="rounded-2xl border border-rose-400/30 bg-rose-950/40 text-rose-100 p-4">
+              {error}
             </div>
           )}
-        </header>
 
-        {error && (
-          <div className="rounded-2xl border border-rose-400/30 bg-rose-950/40 text-rose-100 p-4">
-            {error}
-          </div>
-        )}
+          {effectiveStep === "CHOOSE_RARE_MASK" && (
+            <ClaimGreatMaskSection
+              starterMaskIds={starterMaskIds}
+              reviewMode={reviewMode}
+              advancing={screenBusy}
+              onClaimMask={claimMask}
+              onAdvance={advance}
+            />
+          )}
 
-        {effectiveStep === "CHOOSE_RARE_MASK" && (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md space-y-4">
-            <div>
-              <div className="text-xs text-slate-300/70 uppercase tracking-widest">
-                Choose your starter mask
-              </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white mt-1">
-                Claim a Great Mask (Rare)
-              </h2>
-              <div className="text-sm text-slate-200/75 mt-1">
-                Pick one of the original six Great Masks, in its original color.
-              </div>
-            </div>
+          {effectiveStep === "OPEN_STARTER_PACK" && (
+            <OpenStarterPackSection
+              reviewMode={reviewMode}
+              starterPackOpenedAt={progress?.starter_pack_opened_at}
+              advancing={screenBusy}
+              onAdvance={advance}
+              onOpenPack={openStarterPack}
+            />
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {starterMaskIds.map((maskId) => {
-                if (!isStarterMaskId(maskId)) return null;
-                const info = getStarterMaskRenderInfo(maskId);
-                return (
-                  <button
-                    key={maskId}
-                    className={
-                      "rounded-2xl border p-4 text-left transition bg-black/30 backdrop-blur-sm shadow-sm " +
-                      (reviewMode
-                        ? "border-white/10 opacity-60 cursor-not-allowed"
-                        : "border-white/10 hover:border-white/20")
-                    }
-                    disabled={reviewMode}
-                    onClick={() => claimMask(maskId)}
-                  >
-                    <div className="flex items-center gap-4">
-                      <ColoredMaskWithGlow
-                        maskId={maskId}
-                        color={info.originalColor}
-                        transparent={info.transparent}
-                        className="w-16 h-16"
-                        alt={`${info.name} mask`}
-                      />
-
-                      <div className="flex-1">
-                        <div className="font-semibold text-white">
-                          {info.name}
-                        </div>
-                        <div className="text-sm text-slate-200/75">
-                          Original color: {info.originalColor}
-                          {info.origin ? ` • ${info.origin}` : ""}
-                        </div>
-                      </div>
-
-                      {!reviewMode && (
-                        <div className="text-xs text-slate-300/70">Select</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {reviewMode && (
-              <div className="text-sm text-slate-200/75">
-                Tutorial already completed — masks are shown as examples.
-              </div>
-            )}
-          </section>
-        )}
-
-        {effectiveStep === "OPEN_STARTER_PACK" && (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md space-y-4">
-            <div>
-              <div className="text-xs text-slate-300/70 uppercase tracking-widest">
-                Starter pack
-              </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white mt-1">
-                Open your first pack
-              </h2>
-              <div className="text-sm text-slate-200/75 mt-1">
-                This pack is seeded with commons only.
-              </div>
-            </div>
-
-            {reviewMode ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm text-slate-200/75">
-                  Review run — no pack will be created.
-                </div>
-                <button className="button-primary" onClick={advance}>
-                  Continue
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
-                <div className="text-sm text-slate-200/75">
-                  {progress?.starter_pack_opened_at
-                    ? "Already opened."
-                    : progress?.starter_pack_granted_at
-                      ? "Ready when you are."
-                      : "Preparing your pack…"}
-                </div>
-                <div className="flex gap-2">
-                  {!progress?.starter_pack_granted_at && (
-                    <button
-                      className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-                      onClick={grantStarterPack}
-                    >
-                      Grant pack
-                    </button>
-                  )}
-                  {!progress?.starter_pack_opened_at && (
-                    <button
-                      className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-                      onClick={openStarterPack}
-                    >
-                      Open pack
-                    </button>
-                  )}
-                  {progress?.starter_pack_opened_at && (
-                    <button
-                      className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-                      onClick={advance}
-                    >
-                      Continue
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {effectiveStep === "ACCOUNT_PROMPT" && isGuest && (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md space-y-4">
-            <div>
-              <div className="text-xs text-slate-300/70 uppercase tracking-widest">
-                Keep your collection
-              </div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white mt-1">
-                Create an account?
-              </h2>
-              <div className="text-sm text-slate-200/75 mt-1">
-                Creating an account ties your progress to you, not this device.
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-              <button
-                className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold text-slate-100 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-                onClick={advance}
-              >
-                Not now
-              </button>
-              <Link
-                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 text-center"
-                href="/sign-up?redirect_url=/api/upgrade-guest"
-              >
-                Create account
-              </Link>
-            </div>
-          </section>
-        )}
-
-        {effectiveStep === "ACCOUNT_PROMPT" && !isGuest && (
-          <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md space-y-4">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-white">
-                All set.
-              </h2>
-              <div className="text-sm text-slate-200/75">
-                You’re signed in, so we’ll skip account setup.
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button
-                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-                onClick={advance}
-              >
-                Continue
-              </button>
-            </div>
-          </section>
-        )}
+          {effectiveStep === "ACCOUNT_PROMPT" && (
+            <CreateAccountSection
+              isGuest={isGuest}
+              advancing={screenBusy}
+              onAdvance={advance}
+            />
+          )}
+        </div>
       </div>
     </main>
   );

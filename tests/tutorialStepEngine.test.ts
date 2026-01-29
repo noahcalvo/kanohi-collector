@@ -10,7 +10,6 @@ function progress(overrides?: Partial<any>) {
     currentStep: "INTRO_BIONICLE" as TutorialStep,
     completedAt: null,
     rareMaskGrantedAt: null,
-    starterPackGrantedAt: null,
     starterPackOpenedAt: null,
     accountPromptShownAt: null,
     ...overrides,
@@ -26,7 +25,6 @@ describe("tutorial step engine", () => {
     expect(state.reviewMode).toBe(true);
     expect(state.effectiveStep).toBe("INTRO_BIONICLE");
     expect(state.canGrantRareMask).toBe(false);
-    expect(state.canGrantStarterPack).toBe(false);
   });
 
   it("auto-skips CHOOSE_RARE_MASK if already granted", () => {
@@ -40,11 +38,12 @@ describe("tutorial step engine", () => {
     expect(state.effectiveStep).toBe("OPEN_STARTER_PACK");
   });
 
-  it("auto-skips OPEN_STARTER_PACK if already granted", () => {
+  it("auto-skips OPEN_STARTER_PACK if already opened", () => {
     const state = computeEffectiveTutorialState(
       progress({
         currentStep: "OPEN_STARTER_PACK",
-        starterPackGrantedAt: new Date(),
+        rareMaskGrantedAt: new Date(),
+        starterPackOpenedAt: new Date(),
       }),
       true,
     );
@@ -53,18 +52,22 @@ describe("tutorial step engine", () => {
 
   it("skips ACCOUNT_PROMPT for registered users", () => {
     const state = computeEffectiveTutorialState(
-      progress({ currentStep: "ACCOUNT_PROMPT" }),
+      progress({
+        currentStep: "ACCOUNT_PROMPT",
+        rareMaskGrantedAt: new Date(),
+        starterPackOpenedAt: new Date(),
+      }),
       false,
     );
     expect(state.effectiveStep).toBe("COMPLETE_REDIRECT");
   });
 
-  it("does not advance past granting step when not granted", () => {
+  it("does not advance past gating step when not satisfied", () => {
     const next = computeNextStep("CHOOSE_RARE_MASK", {
       isGuest: true,
       reviewMode: false,
       rareGranted: false,
-      packGranted: false,
+      packOpened: false,
     });
     expect(next).toBe("CHOOSE_RARE_MASK");
   });

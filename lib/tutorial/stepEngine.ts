@@ -4,7 +4,6 @@ export type TutorialProgressLike = {
   currentStep: TutorialStep;
   completedAt: Date | null;
   rareMaskGrantedAt: Date | null;
-  starterPackGrantedAt: Date | null;
   starterPackOpenedAt: Date | null;
   accountPromptShownAt: Date | null;
 };
@@ -13,7 +12,6 @@ export type EffectiveTutorialState = {
   effectiveStep: TutorialStep;
   reviewMode: boolean;
   canGrantRareMask: boolean;
-  canGrantStarterPack: boolean;
   starterPackOpened: boolean;
 };
 
@@ -33,13 +31,18 @@ function nextInOrder(step: TutorialStep): TutorialStep {
   return ORDER[Math.min(idx + 1, ORDER.length - 1)];
 }
 
+function indexOfStep(step: TutorialStep): number {
+  const idx = ORDER.indexOf(step);
+  return idx < 0 ? 0 : idx;
+}
+
 function clampToValidStep(
   step: TutorialStep,
   opts: {
     reviewMode: boolean;
     isGuest: boolean;
     rareGranted: boolean;
-    packGranted: boolean;
+    packOpened: boolean;
   },
 ): TutorialStep {
   // In review mode, we still allow visiting every step, but grant steps become non-granting.
@@ -50,20 +53,31 @@ function clampToValidStep(
     return step;
   }
 
-  // Non-review mode: auto-advance through invalid granting steps.
+  // Non-review mode: do not allow progressing past required actions.
+  // If the user somehow ends up after the gating step (e.g. they exited mid-tutorial),
+  // we "rewind" their effective step back to the earliest incomplete gate.
+  const chooseRareIdx = indexOfStep("CHOOSE_RARE_MASK");
+  const openPackIdx = indexOfStep("OPEN_STARTER_PACK");
   let cur: TutorialStep = step;
-  while (true) {
-    if (!opts.isGuest && cur === "ACCOUNT_PROMPT") {
-      cur = "COMPLETE_REDIRECT";
-      continue;
-    }
 
+  const curIdx = indexOfStep(cur);
+  if (!opts.rareGranted && curIdx > chooseRareIdx) {
+    cur = "CHOOSE_RARE_MASK";
+  } else if (opts.rareGranted && !opts.packOpened && curIdx > openPackIdx) {
+    cur = "OPEN_STARTER_PACK";
+  }
+
+  // Registered users never see ACCOUNT_PROMPT; skip it.
+  if (!opts.isGuest && cur === "ACCOUNT_PROMPT") return "COMPLETE_REDIRECT";
+
+  // Auto-advance through granting steps that are no longer applicable.
+  while (true) {
     if (cur === "CHOOSE_RARE_MASK" && opts.rareGranted) {
       cur = nextInOrder(cur);
       continue;
     }
 
-    if (cur === "OPEN_STARTER_PACK" && opts.packGranted) {
+    if (cur === "OPEN_STARTER_PACK" && opts.packOpened) {
       cur = nextInOrder(cur);
       continue;
     }
@@ -78,7 +92,7 @@ export function computeEffectiveTutorialState(
 ): EffectiveTutorialState {
   const reviewMode = Boolean(progress.completedAt);
   const rareGranted = Boolean(progress.rareMaskGrantedAt);
-  const packGranted = Boolean(progress.starterPackGrantedAt);
+  const packOpened = Boolean(progress.starterPackOpenedAt);
 
   const baseStep: TutorialStep = progress.currentStep;
 
@@ -86,15 +100,14 @@ export function computeEffectiveTutorialState(
     reviewMode,
     isGuest,
     rareGranted,
-    packGranted,
+    packOpened,
   });
 
   return {
     effectiveStep,
     reviewMode,
     canGrantRareMask: !reviewMode && !rareGranted,
-    canGrantStarterPack: !reviewMode && !packGranted,
-    starterPackOpened: Boolean(progress.starterPackOpenedAt),
+    starterPackOpened: packOpened,
   };
 }
 
@@ -104,13 +117,13 @@ export function computeNextStep(
     isGuest: boolean;
     reviewMode: boolean;
     rareGranted: boolean;
-    packGranted: boolean;
+    packOpened: boolean;
   },
 ): TutorialStep {
-  // Guardrails: don't let callers advance past granting steps unless already granted or review mode.
+  // Guardrails: don't let callers advance past gating steps unless satisfied or review mode.
   if (!opts.reviewMode) {
     if (current === "CHOOSE_RARE_MASK" && !opts.rareGranted) return current;
-    if (current === "OPEN_STARTER_PACK" && !opts.packGranted) return current;
+    if (current === "OPEN_STARTER_PACK" && !opts.packOpened) return current;
   }
 
   const next = nextInOrder(current);
@@ -118,6 +131,6 @@ export function computeNextStep(
     reviewMode: opts.reviewMode,
     isGuest: opts.isGuest,
     rareGranted: opts.rareGranted,
-    packGranted: opts.packGranted,
+    packOpened: opts.packOpened,
   });
 }

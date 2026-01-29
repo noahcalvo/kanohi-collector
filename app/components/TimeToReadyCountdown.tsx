@@ -29,8 +29,7 @@ export function TimeToReadyCountdown({ seconds }: TimeToReadyCountdownProps) {
               }}
             >
               {formatted}
-            </span>{" "}
-            until next pack is ready
+            </span>
           </>
         )}
       </div>

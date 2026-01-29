@@ -55,18 +55,18 @@ function rarityClasses(rarity: DrawResultItem["rarity"]) {
   switch (rarity) {
     case "MYTHIC":
       return {
-        ring: "ring-2 ring-emerald-200/70",
+        ring: "ring-emerald-200/70",
         badge: "text-white ",
       };
     case "RARE":
       return {
-        ring: "ring-2 ring-sky-200/70",
-        badge: "text-sky-700 ",
+        ring: "ring-sky-200/70",
+        badge: "text-sky-300 ",
       };
     default:
       return {
-        ring: "ring-1 ring-slate-200/60",
-        badge: "text-slate-800 ",
+        ring: "ring-slate-200/60",
+        badge: "text-slate-200 ",
       };
   }
 }
@@ -144,12 +144,12 @@ export function PackRevealCard(props: {
     >
       <div
         className={
-          "shadow-sm p-6 relative z-10 " +
+          "shadow-sm py-2 px-6 relative z-10 " +
           (alreadySeen !== true
             ? "bg-white/0 "
             : showMythicRain
             ? "bg-white/0 border rounded-3xl border-slate-200/60"
-            : "bg-white/70 border rounded-3xl border-slate-200/60 " +
+            : "rounded-3xl " +
               rarity.ring +
               " " +
               (emphasis === "focused" ? "md:p-8" : "") +
@@ -193,17 +193,14 @@ export function PackRevealCard(props: {
         <div
           className={
             "relative flex items-start " +
-            (!alreadySeen ? "justify-center" : "justify-between gap-4")
+            (!alreadySeen ? "justify-center" : "justify-between h-6")
           }
         >
           <div
             className={
-              "font-semibold tracking-tight line-clamp-2 min-h-[2.8rem] font-voya-nui " +
+              "font-semibold tracking-tight line-clamp-2 min-h-[2.8rem] font-voya-nui text-slate-300 " +
               (!alreadySeen || showMythicRain ? "text-center " : "") +
-              (emphasis === "focused" ? "text-xl " : "text-base ") +
-              (alreadySeen && !showMythicRain
-                ? " text-slate-900"
-                : "text-slate-300")
+              (emphasis === "focused" ? "text-xl " : "text-base ")
             }
           >
             {item.name}
@@ -223,7 +220,7 @@ export function PackRevealCard(props: {
           {alreadySeen === true && (
             <>
               {item.is_new && (
-                <div className="animate-pulse-opaque text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full text-gray-700">
+                <div className="animate-pulse-opaque text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full text-gray-300">
                   New Mask
                 </div>
               )}
@@ -238,7 +235,7 @@ export function PackRevealCard(props: {
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-center">
+        <div className="mt-4 flex items-center justify-center">
           <div className="relative">
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="h-32 w-32 rounded-full bg-white/70 blur-2xl mix-blend-screen" />
@@ -293,7 +290,35 @@ export function PackRevealCard(props: {
             item={item}
             displayLevel={displayLevel}
             displayEssence={displayEssence}
-            mythicHighlight={showMythicRain}
+            mythicHighlight={true}
+            actions={
+              onEquip && item.is_new ? (
+                <div className="flex justify-center relative z-[60]">
+                  <button
+                    className="py-1 rounded-md font-semibold bg-gray-300 text-xs px-6 cursor-pointer text-slate-900 hover:bg-white hover:scale-[1.03] transition transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setShowEquipPopup(!showEquipPopup)}
+                    disabled={!!equipping}
+                  >
+                    Equip Mask
+                  </button>
+
+                  {/* Equipment Popup */}
+                  {showEquipPopup && (
+                    <EquipMaskPopup
+                      item={item}
+                      equipping={equipping}
+                      onEquip={(maskId, slot, color, transparent) =>
+                        onEquip?.(maskId, slot, color, transparent)
+                      }
+                      onClose={() => setShowEquipPopup(false)}
+                      currentToaEquipped={currentToaEquipped}
+                      currentTuragaEquipped={currentTuragaEquipped}
+                      above={true}
+                    />
+                  )}
+                </div>
+              ) : null
+            }
           />
         )}
 
@@ -310,36 +335,6 @@ export function PackRevealCard(props: {
           )}
         </div>
 
-        <div className="flex items-start justify-center mt-3">
-          {onEquip && item.is_new ? (
-            <div className="flex justify-center relative">
-              <button
-                className="button-primary text-xs px-6"
-                onClick={() => setShowEquipPopup(!showEquipPopup)}
-                disabled={!!equipping}
-              >
-                Equip Mask
-              </button>
-
-              {/* Equipment Popup */}
-              {showEquipPopup && (
-                <EquipMaskPopup
-                  item={item}
-                  equipping={equipping}
-                  onEquip={(maskId, slot, color, transparent) =>
-                    onEquip?.(maskId, slot, color, transparent)
-                  }
-                  onClose={() => setShowEquipPopup(false)}
-                  currentToaEquipped={currentToaEquipped}
-                  currentTuragaEquipped={currentTuragaEquipped}
-                  above={true}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="h-[28px]" aria-hidden />
-          )}
-        </div>
       </div>
     </div>
   );

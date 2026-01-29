@@ -1,5 +1,6 @@
 import type { TutorialStep } from "./constants";
 import { masks } from "@/lib/staticData";
+import type { BuffType, Rarity } from "@/lib/types";
 
 export const STARTER_MASK_IDS = ["1", "2", "3", "4", "5", "6"] as const;
 export type StarterMaskId = (typeof STARTER_MASK_IDS)[number];
@@ -11,8 +12,11 @@ export function isStarterMaskId(maskId: string): maskId is StarterMaskId {
 export type StarterMaskRenderInfo = {
   maskId: StarterMaskId;
   name: string;
+  description: string;
+  baseRarity: Rarity;
+  buffType: BuffType;
   originalColor: string;
-  origin?: string;
+  origin: string;
   transparent?: boolean;
 };
 
@@ -26,9 +30,12 @@ export function getStarterMaskRenderInfo(
   return {
     maskId,
     name: def.name,
+    description: def.description,
+    baseRarity: def.base_rarity,
+    buffType: def.buff_type,
     originalColor: def.original_color,
-    origin: (def as any).origin,
-    transparent: (def as any).transparent,
+    origin: def.origin,
+    transparent: def.transparent,
   };
 }
 

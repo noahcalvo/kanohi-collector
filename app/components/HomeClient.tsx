@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { buffPercent } from "../../lib/clientConstants";
 import type { EquipSlot, MePayload, StatusPayload } from "../../lib/types";
-import { ArtCard } from "../components/ArtCard";
 import { EquippedMaskCard } from "../components/MaskCards";
 import { NakedHead } from "../components/NakedHead";
 import { PackOpeningModal } from "../components/PackOpeningModal";
@@ -14,6 +13,7 @@ import { useEquipMask } from "../hooks/useEquipMask";
 import { useMe } from "../hooks/useMe";
 import { usePackOpening } from "../hooks/usePackOpening";
 import { useStatus } from "../hooks/useStatus";
+import { EquippedCard } from "./EquippedCard";
 import { TimeToReadyCountdown } from "./TimeToReadyCountdown";
 
 interface HomeClientProps {
@@ -165,7 +165,7 @@ export function HomeClient({
     currentMe?.equipped.find((m) => m.equipped_slot === "TURAGA") ?? null;
 
   const EmptySlotCard = ({ slot }: { slot: "TOA" | "TURAGA" }) => (
-    <ArtCard
+    <EquippedCard
       popover={
         <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
           <div className="text-xs text-slate-500 uppercase tracking-wide">
@@ -194,7 +194,7 @@ export function HomeClient({
       <div className="mt-3 px-2">
         <div className="h-[28px]"></div>
       </div>
-    </ArtCard>
+    </EquippedCard>
   );
 
   return (
@@ -236,12 +236,11 @@ export function HomeClient({
       <div className="space-y-6">
       {isGuest && (
         <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
-          <div className="font-semibold text-lg mb-1">Welcome, Guest!</div>
-          <div className="mb-2 text-sm text-yellow-800 text-balance">
+          <div className="mb-2 text-xs text-yellow-800 text-pretty">
             Your progress is saved locally. Create an account to save your
             collection and play across devices.
           </div>
-          <Link href="/sign-up" className="button-primary mt-2">
+          <Link href="/sign-up" className="text-slate-900 font-semibold underline text-sm">
             Create Account
           </Link>
         </div>
@@ -252,7 +251,7 @@ export function HomeClient({
           <div className="font-semibold text-lg mb-1">
             Introduction
           </div>
-          <div className="mb-2 text-sm text-sky-800 text-balance">
+          <div className="mb-2 text-sm text-sky-800 text-pretty">
             {tutorialCta === "start"
               ? "Learn how masks work and claim your starter rewards."
               : "Continue the tutorial and claim your starter rewards."}
@@ -265,7 +264,7 @@ export function HomeClient({
 
       <section className="card">
         <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-          Pack progress
+          Pack cooldown
         </h2>
         {currentStatus ? (
           <TimeToReadyCountdown seconds={seconds} />

@@ -36,6 +36,8 @@ export async function POST(req: Request) {
         where: { id: base.id },
       });
 
+      const firstTimeCompleted = locked.completedAt === null;
+
       const now = new Date();
       const updated = await (tx as any).tutorialProgress.update({
         where: { id: locked.id },
@@ -49,6 +51,7 @@ export async function POST(req: Request) {
       return {
         user_id: user.id,
         is_guest: actor.isGuest,
+        first_time_completed: firstTimeCompleted,
         ...computeTutorialStateForResponse(updated, actor.isGuest),
       };
     });

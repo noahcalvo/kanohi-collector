@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -80,16 +81,20 @@ export async function POST(req: Request) {
         };
       }
 
-      if (!progress.starterPackClientRequestId || !progress.starterPackGrantedAt) {
-        throw new Error("Starter pack not granted");
-      }
+      const clientRequestId = progress.starterPackClientRequestId ?? randomUUID();
+      const progressWithRequestId = progress.starterPackClientRequestId
+        ? progress
+        : await (tx as any).tutorialProgress.update({
+            where: { id: progress.id },
+            data: { starterPackClientRequestId: clientRequestId },
+          });
 
       // Idempotency: PackOpen is keyed by (user_id, client_request_id).
       const existing = await tx.packOpen.findUnique({
         where: {
           userId_clientRequestId: {
             userId: user.id,
-            clientRequestId: progress.starterPackClientRequestId,
+            clientRequestId,
           },
         },
         select: { id: true, pityCounterAfter: true },
@@ -100,17 +105,18 @@ export async function POST(req: Request) {
           where: { packOpenId: existing.id },
         });
         const now = new Date();
-        const updatedProgress = progress.starterPackOpenedAt
-          ? progress
+        const updatedProgress = progressWithRequestId.starterPackOpenedAt
+          ? progressWithRequestId
           : await (tx as any).tutorialProgress.update({
-              where: { id: progress.id },
+              where: { id: progressWithRequestId.id },
               data: {
+                starterPackClientRequestId: clientRequestId,
                 starterPackOpenedAt: now,
                 currentStep: actor.isGuest ? "ACCOUNT_PROMPT" : "COMPLETE_REDIRECT",
                 accountPromptShownAt:
-                  actor.isGuest && !progress.accountPromptShownAt
+                  actor.isGuest && !progressWithRequestId.accountPromptShownAt
                     ? now
-                    : progress.accountPromptShownAt,
+                    : progressWithRequestId.accountPromptShownAt,
               },
             });
 
@@ -131,7 +137,7 @@ export async function POST(req: Request) {
           data: {
             userId: user.id,
             packId: PACK_ID,
-            clientRequestId: progress.starterPackClientRequestId,
+            clientRequestId,
             seed,
           },
           select: { id: true },
@@ -142,7 +148,7 @@ export async function POST(req: Request) {
           where: {
             userId_clientRequestId: {
               userId: user.id,
-              clientRequestId: progress.starterPackClientRequestId,
+              clientRequestId,
             },
           },
           select: { id: true, pityCounterAfter: true },
@@ -154,7 +160,7 @@ export async function POST(req: Request) {
         return {
           user_id: user.id,
           is_guest: actor.isGuest,
-          ...computeTutorialStateForResponse(progress, actor.isGuest),
+          ...computeTutorialStateForResponse(progressWithRequestId, actor.isGuest),
           opened: true,
           results: buildReplayResponse(pulls, raced.pityCounterAfter ?? 0),
         };
@@ -194,6 +200,7 @@ export async function POST(req: Request) {
       const updatedProgress = await (tx as any).tutorialProgress.update({
         where: { id: progress.id },
         data: {
+          starterPackClientRequestId: clientRequestId,
           starterPackOpenedAt: now,
           currentStep: actor.isGuest ? "ACCOUNT_PROMPT" : "COMPLETE_REDIRECT",
           accountPromptShownAt:

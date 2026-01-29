@@ -25,8 +25,8 @@ export default function RootLayout({
 
   const content = (
     <html lang="en" className={voyanui.variable}>
-      <body className="antialiased bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 text-slate-900 min-h-screen flex flex-col font-sans overflow-hidden">
-        <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10 space-y-8 pb-32 max-h-screen overflow-y-auto">
+      <body className="antialiased bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 text-slate-900 min-h-screen flex flex-col font-sans max-h-screen overflow-y-auto">
+        <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10 space-y-8 pb-32">
           {children}
         </main>
 
