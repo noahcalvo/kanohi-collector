@@ -2,6 +2,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Suspense } from "react";
 import { BottomNav } from "./components/BottomNav";
 
 const voyanui = localFont({
@@ -33,7 +34,9 @@ export default function RootLayout({
         <div className="fixed inset-x-0 bottom-0 z-[150] backdrop-blur bg-white/30">
           <div className="w-full px-4 pb-6">
             <div className="max-w-5xl mx-auto">
-              <BottomNav />
+              <Suspense fallback={null}>
+                <BottomNav />
+              </Suspense>
             </div>
           </div>
         </div>
