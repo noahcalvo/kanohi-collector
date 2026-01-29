@@ -25,8 +25,10 @@ It combines a **game-like loop** with **collection tracking mechanics** for pure
 
 View my mask pixel art in `public/masks`
 
-![Claim Rare Mask](public/gifs/claim-rare-mask.gif)
-![Open Bonus Pack](public/gifs/open-bonus-pack.gif)
+<p align="center">
+  <img src="public/gifs/claim-rare-mask.gif" alt="Claim Rare Mask" width="45%" />
+  <img src="public/gifs/open-bonus-pack.gif" alt="Open Bonus Pack" width="45%" />
+</p>
 
 
 ---
