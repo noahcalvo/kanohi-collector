@@ -2,13 +2,9 @@ import { z } from "zod";
 import { getRequestId, jsonError, jsonOk, startRouteSpan } from "@/lib/api/routeUtils";
 import { getOrCreateUserId, setGuestCookie } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
-import { createPrismaStore } from "@/lib/store/prismaStore";
 import { TUTORIAL_KEY } from "@/lib/tutorial/constants";
-import {
-  computeTutorialStateForResponse,
-  tutorialKeySchema,
-  upsertTutorialProgress,
-} from "@/lib/tutorial/server";
+import { tutorialKeySchema } from "@/lib/tutorial/server";
+import { getTutorialProgressPayload } from "@/lib/tutorial/service";
 import { STARTER_MASK_IDS } from "@/lib/tutorial/starterMasks";
 
 export async function GET(req: Request) {
@@ -24,18 +20,7 @@ export async function GET(req: Request) {
     if (actor.setCookie) setGuestCookie(actor.userId);
 
     const result = await prisma.$transaction(async (tx) => {
-      const store = createPrismaStore(tx);
-      const user = await store.getOrCreateUser(actor.isGuest, actor.userId);
-      const progress = await upsertTutorialProgress(tx, {
-        userId: user.id,
-        tutorialKey,
-      });
-
-      return {
-        user_id: user.id,
-        is_guest: actor.isGuest,
-        ...computeTutorialStateForResponse(progress, actor.isGuest),
-      };
+      return getTutorialProgressPayload(tx, actor, tutorialKey);
     });
 
     span.ok({ status: 200, isGuest: actor.isGuest });

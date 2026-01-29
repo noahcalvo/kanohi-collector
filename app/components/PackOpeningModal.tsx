@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect } from "react";
 import { colorToHex } from "../../lib/colors";
 import type { EquipSlot, OpenResult } from "../../lib/types";
+import { InlineNotice } from "./InlineNotice";
 import { PackRevealCard } from "./PackRevealCard";
 
 export type PackOverlayStage =
@@ -22,6 +23,10 @@ export function PackOpeningModal(props: {
   results: OpenResult | null;
   revealedCount: number;
   errorMessage?: string | null;
+  actionErrorMessage?: string | null;
+  onDismissActionError?: () => void;
+  onRetry?: () => void;
+  retrying?: boolean;
   onEquip?: (
     maskId: string,
     slot: EquipSlot,
@@ -49,6 +54,10 @@ export function PackOpeningModal(props: {
     stage,
     results,
     errorMessage,
+    actionErrorMessage,
+    onDismissActionError,
+    onRetry,
+    retrying,
     onEquip,
     equipping,
     onClose,
@@ -143,6 +152,17 @@ export function PackOpeningModal(props: {
           e.stopPropagation();
         }}
       >
+        {actionErrorMessage && stage !== "error" && (
+          <div className="mb-4">
+            <InlineNotice
+              tone="error"
+              message={actionErrorMessage}
+              actionLabel={onDismissActionError ? "Dismiss" : undefined}
+              onAction={onDismissActionError}
+            />
+          </div>
+        )}
+
         {showBoth && (
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -215,8 +235,30 @@ export function PackOpeningModal(props: {
           )}
 
           {stage === "error" && (
-            <div className="mt-6 text-sm text-rose-700">
-              {errorMessage ?? "Pack open failed"}
+            <div className="mt-6 w-full max-w-md rounded-2xl border border-rose-200/70 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+              <div className="font-semibold">Pack open failed</div>
+              <div className="mt-1 text-rose-800/90">
+                {errorMessage ?? "Something went wrong."}
+              </div>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                {onRetry && (
+                  <button
+                    type="button"
+                    className="button-primary text-sm"
+                    onClick={onRetry}
+                    disabled={Boolean(retrying)}
+                  >
+                    {retrying ? "Retrying…" : "Retry"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="button-secondary text-sm"
+                  onClick={onClose}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
 

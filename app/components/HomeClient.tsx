@@ -80,7 +80,13 @@ export function HomeClient({
     useColorPicker({
       refreshMe,
     });
-  const combinedError = error ?? equipError ?? changeError;
+  const combinedError = packOverlayOpen ? null : error ?? equipError ?? changeError;
+
+  const modalActionError = packOverlayOpen ? equipError ?? changeError : null;
+  const dismissModalActionError = () => {
+    clearEquipError();
+    clearChangeError();
+  };
 
   const openPack = async () => {
     // Preserve prior behavior: opening a pack clears any existing error.
@@ -196,6 +202,10 @@ export function HomeClient({
         results={results}
         revealedCount={revealedCount}
         errorMessage={packError}
+        actionErrorMessage={modalActionError}
+        onDismissActionError={modalActionError ? dismissModalActionError : undefined}
+        onRetry={openPack}
+        retrying={opening}
         onEquip={equipAndClear}
         equipping={equipping}
         onClose={closePackOverlay}
@@ -244,6 +254,7 @@ export function HomeClient({
           tone="error"
           message={statusError}
           actionLabel={statusLoading ? "Retrying…" : "Retry"}
+          actionDisabled={statusLoading}
           onAction={() => {
             clearStatusError();
             refreshStatus();
@@ -256,6 +267,7 @@ export function HomeClient({
           tone="error"
           message={meError}
           actionLabel={meLoading ? "Retrying…" : "Retry"}
+          actionDisabled={meLoading}
           onAction={() => {
             clearMeError();
             refreshMe();
@@ -309,10 +321,12 @@ export function HomeClient({
         <button
           className="button-primary text-lg px-10 py-4"
           onClick={openPack}
-          disabled={!currentStatus?.pack_ready || opening}
+          disabled={!currentStatus?.pack_ready || opening || packOverlayOpen}
         >
           {opening
             ? "Opening..."
+            : statusLoading
+              ? "Checking..."
             : currentStatus?.pack_ready
               ? "Open Pack"
               : "Not ready"}
@@ -365,10 +379,6 @@ export function HomeClient({
             )}
           </div>
         </section>
-      )}
-
-      {combinedError && (
-        <p className="text-rose-700 text-sm">{combinedError}</p>
       )}
     </div>
     </div>

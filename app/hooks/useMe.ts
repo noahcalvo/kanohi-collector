@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MePayload } from "../../lib/types";
-import { ApiError, fetchJson } from "../lib/fetchJson";
+import { formatApiErrorMessage } from "../lib/errors";
+import { fetchJson } from "../lib/fetchJson";
 
 export function useMe(options?: {
   initialMe?: MePayload;
@@ -30,8 +31,7 @@ export function useMe(options?: {
       setMe(data);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      if (err instanceof ApiError) setError(err.message);
-      else setError(err instanceof Error ? err.message : "Unknown error");
+      setError(formatApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

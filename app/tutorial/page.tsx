@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { InlineNotice } from "@/app/components/InlineNotice";
 import { PackOpeningModal } from "@/app/components/PackOpeningModal";
 import type { PackOverlayStage } from "@/app/components/PackOpeningModal";
-import { ApiError, fetchJson } from "@/app/lib/fetchJson";
+import { formatApiErrorMessage } from "@/app/lib/errors";
+import { fetchJson } from "@/app/lib/fetchJson";
 import { ClaimGreatMaskSection } from "@/app/tutorial/components/ClaimGreatMaskSection";
 import { CreateAccountSection } from "@/app/tutorial/components/CreateAccountSection";
 import { OpenStarterPackSection } from "@/app/tutorial/components/OpenStarterPackSection";
@@ -51,6 +53,7 @@ export default function TutorialPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [screenBusy, setScreenBusy] = useState(false);
+  const [openingStarterPack, setOpeningStarterPack] = useState(false);
 
   // Pack opening overlay (reusing existing modal)
   const [packOverlayOpen, setPackOverlayOpen] = useState(false);
@@ -75,8 +78,7 @@ export default function TutorialPage() {
       const data = await fetchJson<ProgressResponse>("/api/tutorial/progress");
       setProgress(data);
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
-      else setError(err instanceof Error ? err.message : "Failed to load tutorial");
+      setError(formatApiErrorMessage(err, "Failed to load tutorial"));
     } finally {
       setLoading(false);
     }
@@ -94,18 +96,17 @@ export default function TutorialPage() {
     (async () => {
       let target = "/";
       try {
-        const res = await fetch("/api/tutorial/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-
-        if (res.ok) {
-          const data = (await res.json().catch(() => null)) as
-            | { first_time_completed?: boolean }
-            | null;
-          if (data?.first_time_completed) target = "/?npe=collection-tip";
-        }
+        const data = await fetchJson<{ first_time_completed?: boolean }>(
+          "/api/tutorial/complete",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          },
+        );
+        if (data?.first_time_completed) target = "/?npe=collection-tip";
+      } catch {
+        // If completion fails, still redirect to home.
       } finally {
         setLeavingToHome(true);
         if (!prefersReducedMotion) {
@@ -128,8 +129,7 @@ export default function TutorialPage() {
       });
       await refresh();
     } catch (err) {
-      if (err instanceof ApiError) setError(err.message);
-      else setError(err instanceof Error ? err.message : "Could not advance tutorial");
+      setError(formatApiErrorMessage(err, "Could not advance tutorial"));
     } finally {
       setScreenBusy(false);
     }
@@ -159,8 +159,7 @@ export default function TutorialPage() {
         await refresh();
         return true;
       } catch (err) {
-        if (err instanceof ApiError) setError(err.message);
-        else setError(err instanceof Error ? err.message : "Could not claim mask");
+        setError(formatApiErrorMessage(err, "Could not claim mask"));
         return false;
       }
     },
@@ -203,6 +202,7 @@ export default function TutorialPage() {
   const openStarterPack = useCallback(async () => {
     if (packOverlayOpen) return;
     setError(null);
+    setOpeningStarterPack(true);
 
     // Reset overlay.
     packOverlayTimeoutsRef.current.forEach(clearTimeout);
@@ -229,8 +229,8 @@ export default function TutorialPage() {
       });
     } catch (err) {
       setPackOverlayStage("error");
-      if (err instanceof ApiError) setError(err.message);
-      else setError(err instanceof Error ? err.message : "Starter pack open failed");
+      setError(formatApiErrorMessage(err, "Starter pack open failed"));
+      setOpeningStarterPack(false);
       return;
     }
     if (!data.opened || !data.results) {
@@ -241,6 +241,7 @@ export default function TutorialPage() {
     }
     setPackResults(data.results);
     await refresh();
+    setOpeningStarterPack(false);
   }, [advance, closePackOverlay, packOverlayOpen, refresh]);
 
   const starterMaskIds = useMemo(
@@ -313,8 +314,26 @@ export default function TutorialPage() {
       <div className="min-h-full flex items-center justify-center px-6 py-10 sm:py-14">
         <div className="mx-auto w-full max-w-2xl space-y-6">
           {error && (
-            <div className="rounded-2xl border border-rose-400/30 bg-rose-950/40 text-rose-100 p-4">
-              {error}
+            <InlineNotice
+              tone="error"
+              message={error}
+              actionLabel={screenBusy ? "Retrying…" : "Retry"}
+              actionDisabled={screenBusy}
+              onAction={() => {
+                refresh();
+              }}
+            />
+          )}
+
+          {error && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="text-xs font-semibold underline underline-offset-2 text-slate-200/80 hover:text-slate-50"
+                onClick={() => setError(null)}
+              >
+                Dismiss
+              </button>
             </div>
           )}
 
@@ -333,6 +352,7 @@ export default function TutorialPage() {
               reviewMode={reviewMode}
               starterPackOpenedAt={progress?.starter_pack_opened_at}
               advancing={screenBusy}
+              opening={openingStarterPack}
               onAdvance={advance}
               onOpenPack={openStarterPack}
             />

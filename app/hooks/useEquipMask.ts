@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import type { EquipSlot } from "../../lib/types";
-import { ApiError, fetchJson } from "../lib/fetchJson";
+import { formatApiErrorMessage } from "../lib/errors";
+import { fetchJson } from "../lib/fetchJson";
 
 export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
@@ -23,6 +24,7 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
       color?: string,
       transparent?: boolean
     ) => {
+      if (equipping) return;
       setEquipping(equipLabel(maskId, slot));
       setEquipError(null);
 
@@ -44,13 +46,12 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
 
         await refreshMe();
       } catch (err) {
-        if (err instanceof ApiError) setEquipError(err.message);
-        else setEquipError(err instanceof Error ? err.message : "Unknown error");
+        setEquipError(formatApiErrorMessage(err));
       } finally {
         setEquipping(null);
       }
     },
-    [equipLabel, refreshMe]
+    [equipLabel, equipping, refreshMe]
   );
 
   return { equip, equipping, equipError, clearEquipError };

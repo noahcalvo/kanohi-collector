@@ -3,6 +3,7 @@ type InlineNoticeProps = {
   message: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
 };
 
 export function InlineNotice({
@@ -10,6 +11,7 @@ export function InlineNotice({
   message,
   actionLabel,
   onAction,
+  actionDisabled,
 }: InlineNoticeProps) {
   const styles =
     tone === "error"
@@ -25,6 +27,7 @@ export function InlineNotice({
             type="button"
             className="shrink-0 text-xs font-semibold underline underline-offset-2"
             onClick={onAction}
+            disabled={actionDisabled}
           >
             {actionLabel}
           </button>

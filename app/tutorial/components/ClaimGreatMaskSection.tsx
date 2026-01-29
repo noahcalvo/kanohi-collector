@@ -54,6 +54,8 @@ export function ClaimGreatMaskSection(props: {
     }
   }, [props.reviewMode]);
 
+  const busy = claiming || Boolean(props.advancing);
+
   useEffect(() => {
     if (!selectedMaskId) return;
 
@@ -61,13 +63,13 @@ export function ClaimGreatMaskSection(props: {
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !claiming) setSelectedMaskId(null);
+      if (e.key === "Escape" && !busy) setSelectedMaskId(null);
     };
     window.addEventListener("keydown", onKeyDown);
 
     // Give the dialog a moment to mount before focusing.
     const t = window.setTimeout(() => {
-      if (!claiming) pickButtonRef.current?.focus();
+      if (!busy) pickButtonRef.current?.focus();
     }, 0);
 
     return () => {
@@ -75,7 +77,7 @@ export function ClaimGreatMaskSection(props: {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [claiming, selectedMaskId]);
+  }, [busy, selectedMaskId]);
 
   return (
     <section className="fixed inset-0 z-50 h-[100dvh] w-[100dvw] select-none">
@@ -110,8 +112,16 @@ export function ClaimGreatMaskSection(props: {
             return (
               <div
                 key={maskId}
-                onClick={() => setSelectedMaskId(maskId)}
-                className="cursor-pointer hover:scale-125 transition duration-300 ease-in-out"
+                onClick={() => {
+                  if (busy) return;
+                  setSelectedMaskId(maskId);
+                }}
+                className={
+                  "transition duration-300 ease-in-out " +
+                  (busy
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer hover:scale-125")
+                }
               >
                 <ColoredMaskWithGlow
                   maskId={maskId}

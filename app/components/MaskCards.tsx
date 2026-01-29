@@ -176,7 +176,7 @@ export function EquippedMaskCard({
                 colors={mask.unlocked_colors}
                 currentColor={mask.equipped_color}
                 onSelectColor={onChangeColor || (() => {})}
-                isChanging={changing === mask.mask_id}
+                isChanging={Boolean(changing)}
                 maskId={mask.mask_id}
               />
             ) : (
@@ -249,6 +249,7 @@ export function CollectionMaskCard({
   } | null;
 }) {
   const [showEquipPopup, setShowEquipPopup] = useState(false);
+  const busy = Boolean(equipping) || Boolean(changing);
 
   const displayColor =
     selectedColor ?? mask.equipped_color ?? mask.unlocked_colors[0];
@@ -315,7 +316,7 @@ export function CollectionMaskCard({
           unlockedColors={mask.unlocked_colors}
           currentColor={displayColor}
           onSelectColor={onChangeColor || (() => {})}
-          isChanging={changing === mask.mask_id}
+          isChanging={busy}
           maskId={mask.mask_id}
         />
       </div>
@@ -326,8 +327,9 @@ export function CollectionMaskCard({
           type="button"
           className="w-full button-primary text-sm py-2"
           onClick={() => setShowEquipPopup(!showEquipPopup)}
+          disabled={busy}
         >
-          Equip Mask
+          {equipping ? "Equipping…" : "Equip Mask"}
         </button>
 
         {showEquipPopup && (

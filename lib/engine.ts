@@ -21,6 +21,7 @@ import type {
   Mask,
   OpenResult,
   Rarity,
+  User,
   UserMask,
   EquipSlot,
 } from "./types";
@@ -448,6 +449,15 @@ export async function openPack(
   store: GameStore = prismaStore,
 ): Promise<OpenResult> {
   const user = await store.getOrCreateUser(guest, userId);
+  return openPackForUser(user, packId, opts, store);
+}
+
+export async function openPackForUser(
+  user: User,
+  packId: string,
+  opts?: { seed?: string },
+  store: GameStore = prismaStore,
+): Promise<OpenResult> {
   const pack = db.packs.find((p) => p.pack_id === packId);
   if (!pack) throw new Error("Pack not found");
 
@@ -740,7 +750,7 @@ function calculateColorAvailability(
   const userMaskById = new Map(userMasks.map((um) => [um.mask_id, um] as const));
   const colorStats: Record<string, { owned: number; available: number }> = {};
 
-  for (const [color, maskIds] of MASK_IDS_BY_COLOR) {
+  for (const [color, maskIds] of Array.from(MASK_IDS_BY_COLOR.entries())) {
     let owned = 0;
     for (const maskId of maskIds) {
       const um = userMaskById.get(maskId);

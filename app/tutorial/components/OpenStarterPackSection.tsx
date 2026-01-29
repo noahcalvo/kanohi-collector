@@ -4,10 +4,12 @@ export function OpenStarterPackSection(props: {
   reviewMode: boolean;
   starterPackOpenedAt: string | null | undefined;
   advancing?: boolean;
+  opening?: boolean;
   onAdvance: () => void;
   onOpenPack: () => void;
 }) {
   const { reviewMode, starterPackOpenedAt } = props;
+  const busy = Boolean(props.advancing) || Boolean(props.opening);
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-md space-y-4">
@@ -46,15 +48,16 @@ export function OpenStarterPackSection(props: {
               <button
                 className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 onClick={props.onOpenPack}
+                disabled={busy}
               >
-                Open pack
+                {props.opening ? "Opening…" : "Open pack"}
               </button>
             )}
             {starterPackOpenedAt && (
               <button
                 className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 onClick={props.onAdvance}
-                disabled={props.advancing}
+                disabled={busy}
               >
                 {props.advancing ? "Continuing…" : "Continue"}
               </button>

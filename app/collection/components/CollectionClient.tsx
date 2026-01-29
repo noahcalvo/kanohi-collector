@@ -20,7 +20,13 @@ export function CollectionClient({
   allMasks,
 }: CollectionClientProps) {
   // Use the hook to get real-time updates, but start with server data
-  const { me, refreshMe, error: meError, clearError: clearMeError } = useMe({
+  const {
+    me,
+    refreshMe,
+    loading: meLoading,
+    error: meError,
+    clearError: clearMeError,
+  } = useMe({
     initialMe,
   });
   const currentMe = me ?? initialMe;
@@ -158,7 +164,8 @@ export function CollectionClient({
         <InlineNotice
           tone="error"
           message={meError}
-          actionLabel="Retry"
+          actionLabel={meLoading ? "Retrying…" : "Retry"}
+          actionDisabled={meLoading}
           onAction={() => {
             clearMeError();
             refreshMe();
@@ -200,7 +207,14 @@ export function CollectionClient({
         )}
       </section>
 
-      {equipError && <InlineNotice tone="error" message={equipError} />}
+      {equipError && (
+        <InlineNotice
+          tone="error"
+          message={equipError}
+          actionLabel="Dismiss"
+          onAction={clearEquipError}
+        />
+      )}
 
       {currentMe?.collection && (
         <CollectionStats

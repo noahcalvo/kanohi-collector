@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenResult } from "../../lib/types";
 import type { PackOverlayStage } from "../components/PackOpeningModal";
-import { ApiError, fetchJson } from "../lib/fetchJson";
+import { formatApiErrorMessage } from "../lib/errors";
+import { fetchJson } from "../lib/fetchJson";
 
 export function usePackOpening(args: {
   packReady: boolean;
@@ -154,8 +155,7 @@ export function usePackOpening(args: {
       setResults(data);
       refreshStatus();
     } catch (err) {
-      if (err instanceof ApiError) setPackError(err.message);
-      else setPackError(err instanceof Error ? err.message : "Unknown error");
+      setPackError(formatApiErrorMessage(err));
       setPackOverlayStage("error");
     } finally {
       setOpening(false);

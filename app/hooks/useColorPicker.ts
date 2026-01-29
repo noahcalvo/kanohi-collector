@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ApiError, fetchJson } from "../lib/fetchJson";
+import { formatApiErrorMessage } from "../lib/errors";
+import { fetchJson } from "../lib/fetchJson";
 
 export function useColorPicker(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
@@ -15,6 +16,7 @@ export function useColorPicker(args: { refreshMe: () => Promise<void> | void }) 
 
   const changeColor = useCallback(
     async (maskId: string, color: string) => {
+      if (changing) return;
       setChanging(maskId);
       setChangeError(null);
 
@@ -26,14 +28,12 @@ export function useColorPicker(args: { refreshMe: () => Promise<void> | void }) 
         });
         await refreshMe();
       } catch (err) {
-        if (err instanceof ApiError) setChangeError(err.message);
-        else
-          setChangeError(err instanceof Error ? err.message : "Unknown error");
+        setChangeError(formatApiErrorMessage(err));
       } finally {
         setChanging(null);
       }
     },
-    [refreshMe],
+    [changing, refreshMe],
   );
 
   return { changeColor, changing, changeError, clearChangeError };

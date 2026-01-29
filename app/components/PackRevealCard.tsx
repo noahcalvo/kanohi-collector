@@ -148,7 +148,7 @@ export function PackRevealCard(props: {
           (alreadySeen !== true
             ? "bg-white/0 "
             : showMythicRain
-            ? "bg-white/0 border rounded-3xl border-slate-200/60"
+            ? "bg-white/0 rounded-3xl border-slate-200/60 md:p-8 "
             : "rounded-3xl " +
               rarity.ring +
               " " +
@@ -299,7 +299,7 @@ export function PackRevealCard(props: {
                     onClick={() => setShowEquipPopup(!showEquipPopup)}
                     disabled={!!equipping}
                   >
-                    Equip Mask
+                    {equipping ? "Equipping…" : "Equip Mask"}
                   </button>
 
                   {/* Equipment Popup */}
