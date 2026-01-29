@@ -25,11 +25,8 @@ It combines a **game-like loop** with **collection tracking mechanics** for pure
 
 View my mask pixel art in `public/masks`
 
-![Tahu](public/masks/1.png)
-![Gali](public/masks/2.png)
-![Lewa](public/masks/3.png)
-![Vakama](public/masks/7.png)
-![Mask pack](public/pack/pack.png)
+![Claim Rare Mask](public/gifs/claim-rare-mask.gif)
+![Open Bonus Pack](public/gifs/open-bonus-pack.gif)
 
 
 ---
