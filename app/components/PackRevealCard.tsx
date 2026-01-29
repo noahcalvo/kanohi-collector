@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { useTapGuard } from "../hooks/useTapGuard";
 import type { EquipSlot, DrawResultItem } from "../../lib/types";
+import { useTapGuard } from "../hooks/useTapGuard";
 import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";
 import { ProtodermisProgressBar } from "./ProtodermisProgressBar";

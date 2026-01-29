@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useTapGuard } from "../hooks/useTapGuard";
 import {
   buffPercent,
   getBuffDescription,
@@ -11,6 +10,7 @@ import {
 import { colorToHex } from "../../lib/colors";
 import type { EquipSlot, Rarity } from "../../lib/types";
 import type { CollectionMask, DrawResultItem, UserMask } from "../../lib/types";
+import { useTapGuard } from "../hooks/useTapGuard";
 import { ArtCard } from "./ArtCard";
 import EquipMaskPopup from "./EquipMaskPopup";
 import { HeroImage } from "./HeroImage";
