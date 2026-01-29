@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getRequestId, jsonError, jsonOk, startRouteSpan } from "@/lib/api/routeUtils";
 import { getOrCreateUserId, setGuestCookie } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { createPrismaStore } from "@/lib/store/prismaStore";
@@ -16,6 +16,8 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const requestId = getRequestId(req);
+  const span = startRouteSpan("POST /api/tutorial/complete", requestId);
   try {
     const body = bodySchema.parse(await req.json().catch(() => ({})));
 
@@ -56,9 +58,17 @@ export async function POST(req: Request) {
       };
     });
 
-    return NextResponse.json(result);
+    span.ok({ status: 200, isGuest: actor.isGuest, firstTimeCompleted: result.first_time_completed });
+    return jsonOk(result, requestId);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = err instanceof z.ZodError ? 400 : 500;
+    const message =
+      status === 400
+        ? err instanceof Error
+          ? err.message
+          : "Invalid request"
+        : "Internal server error";
+    span.error(err, { status });
+    return jsonError(message, status, requestId);
   }
 }

@@ -201,6 +201,9 @@ export default function TutorialPage() {
   }, [packOverlayAnimationDone, packOverlayOpen, packOverlayStage, packResults]);
 
   const openStarterPack = useCallback(async () => {
+    if (packOverlayOpen) return;
+    setError(null);
+
     // Reset overlay.
     packOverlayTimeoutsRef.current.forEach(clearTimeout);
     packOverlayTimeoutsRef.current = [];
@@ -238,7 +241,7 @@ export default function TutorialPage() {
     }
     setPackResults(data.results);
     await refresh();
-  }, [advance, closePackOverlay, refresh]);
+  }, [advance, closePackOverlay, packOverlayOpen, refresh]);
 
   const starterMaskIds = useMemo(
     () => progress?.starter_mask_ids ?? STARTER_MASK_IDS,

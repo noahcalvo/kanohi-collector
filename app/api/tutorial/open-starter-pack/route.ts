@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import type { Prisma } from "@prisma/client";
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getRequestId, jsonError, jsonOk, startRouteSpan } from "@/lib/api/routeUtils";
 import { getOrCreateUserId, setGuestCookie } from "@/lib/auth";
 import { prisma } from "@/lib/db/prisma";
 import { openTutorialCommonsOnlyPack } from "@/lib/engine";
@@ -50,6 +50,8 @@ function buildReplayResponse(pulls: any[], pityCounterAfter: number) {
 }
 
 export async function POST(req: Request) {
+  const requestId = getRequestId(req);
+  const span = startRouteSpan("POST /api/tutorial/open-starter-pack", requestId);
   try {
     const body = bodySchema.parse(await req.json().catch(() => ({})));
 
@@ -219,9 +221,17 @@ export async function POST(req: Request) {
       };
     });
 
-    return NextResponse.json(result);
+    span.ok({ status: 200, isGuest: result.is_guest, opened: result.opened });
+    return jsonOk(result, requestId);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = err instanceof z.ZodError ? 400 : 500;
+    const message =
+      status === 400
+        ? err instanceof Error
+          ? err.message
+          : "Invalid request"
+        : "Internal server error";
+    span.error(err, { status });
+    return jsonError(message, status, requestId);
   }
 }

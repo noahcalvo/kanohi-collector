@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
-import { masks } from "../../../lib/staticData";
+import { getRequestId, jsonError, jsonOk, startRouteSpan } from "@/lib/api/routeUtils";
+import { masks } from "@/lib/staticData";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const requestId = getRequestId(req);
+  const span = startRouteSpan("GET /api/masks", requestId);
   try {
-    return NextResponse.json({ masks });
+    span.ok({ status: 200 });
+    return jsonOk({ masks }, requestId);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    span.error(err, { status: 500 });
+    return jsonError("Internal server error", 500, requestId);
   }
 }
