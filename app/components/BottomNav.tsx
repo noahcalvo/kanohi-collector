@@ -4,7 +4,6 @@ import {
   Home,
   Package,
   Users,
-  ShoppingBag,
   Settings as SettingsIcon,
 } from "lucide-react";
 import Link from "next/link";

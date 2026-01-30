@@ -344,6 +344,84 @@ body {
   }
 }
 
+/* Pack wiggle: use translate3d for better mobile/Safari compositor behavior. */
+@-webkit-keyframes pack-wiggle {
+  0%,
+  100% {
+    -webkit-transform: translate3d(0, 0, 0) rotateZ(0deg);
+            transform: translate3d(0, 0, 0) rotateZ(0deg);
+  }
+  10% {
+    -webkit-transform: translate3d(-2px, 0, 0) rotateZ(-1deg);
+            transform: translate3d(-2px, 0, 0) rotateZ(-1deg);
+  }
+  20% {
+    -webkit-transform: translate3d(3px, 0, 0) rotateZ(1deg);
+            transform: translate3d(3px, 0, 0) rotateZ(1deg);
+  }
+  30% {
+    -webkit-transform: translate3d(-4px, 0, 0) rotateZ(-1.5deg);
+            transform: translate3d(-4px, 0, 0) rotateZ(-1.5deg);
+  }
+  40% {
+    -webkit-transform: translate3d(4px, 0, 0) rotateZ(1.5deg);
+            transform: translate3d(4px, 0, 0) rotateZ(1.5deg);
+  }
+  50% {
+    -webkit-transform: translate3d(-3px, 0, 0) rotateZ(-1deg);
+            transform: translate3d(-3px, 0, 0) rotateZ(-1deg);
+  }
+  60% {
+    -webkit-transform: translate3d(3px, 0, 0) rotateZ(1deg);
+            transform: translate3d(3px, 0, 0) rotateZ(1deg);
+  }
+  70% {
+    -webkit-transform: translate3d(-2px, 0, 0) rotateZ(-0.5deg);
+            transform: translate3d(-2px, 0, 0) rotateZ(-0.5deg);
+  }
+  80% {
+    -webkit-transform: translate3d(2px, 0, 0) rotateZ(0.5deg);
+            transform: translate3d(2px, 0, 0) rotateZ(0.5deg);
+  }
+}
+
+@keyframes pack-wiggle {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotateZ(0deg);
+  }
+  10% {
+    transform: translate3d(-2px, 0, 0) rotateZ(-1deg);
+  }
+  20% {
+    transform: translate3d(3px, 0, 0) rotateZ(1deg);
+  }
+  30% {
+    transform: translate3d(-4px, 0, 0) rotateZ(-1.5deg);
+  }
+  40% {
+    transform: translate3d(4px, 0, 0) rotateZ(1.5deg);
+  }
+  50% {
+    transform: translate3d(-3px, 0, 0) rotateZ(-1deg);
+  }
+  60% {
+    transform: translate3d(3px, 0, 0) rotateZ(1deg);
+  }
+  70% {
+    transform: translate3d(-2px, 0, 0) rotateZ(-0.5deg);
+  }
+  80% {
+    transform: translate3d(2px, 0, 0) rotateZ(0.5deg);
+  }
+}
+
+.animate-pack-wiggle {
+  -webkit-animation: pack-wiggle 650ms ease-in-out 2;
+          animation: pack-wiggle 650ms ease-in-out 2;
+  will-change: transform;
+}
+
 .animate-pack-top-separate {
   animation: pack-top-separate 1.5s ease-out forwards;
 }

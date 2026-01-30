@@ -211,9 +211,9 @@ export function PackOpeningModal(props: {
               ) : (
                 <div
                   className={
-                    "text-slate-200 transition-all duration-500 ease-out " +
+                    "text-slate-200 transition-all duration-500 ease-out transform-gpu will-change-transform " +
                     (stage === "shaking"
-                      ? "animate-chest-shake motion-reduce:animate-none"
+                      ? "animate-pack-wiggle motion-reduce:animate-pulse"
                       : "")
                   }
                 >

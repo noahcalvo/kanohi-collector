@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { buffPercent } from "../../lib/clientConstants";
@@ -332,13 +333,34 @@ export function HomeClient({
         <button
           onClick={openPack}
           disabled={!currentStatus?.pack_ready || opening || packOverlayOpen}
+          className="relative group select-none"
+          aria-label="Open pack"
         >
           {opening
             ? "Opening..."
             : statusLoading
               ? "Checking..."
             : currentStatus?.pack_ready
-              ? <img src="/pack/pack.png" alt="Open Pack" className="hover:scale-105 transition shadow-lg"/>
+              ? (
+                  <div className="relative">
+                    <Image
+                      src="/pack/pack.png"
+                      alt="Pack"
+                      width={160}
+                      height={160}
+                      className="h-auto w-[160px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:scale-[1.04] group-active:scale-[0.98]"
+                      priority
+                    />
+
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="rounded-full bg-white/85 backdrop-blur-sm border border-slate-200/70 px-4 py-1.5 shadow-sm">
+                        <div className="text-sm font-semibold text-slate-900 tracking-tight">
+                          Open
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
               : "Not ready"}
         </button>)}
       </section>
