@@ -291,6 +291,15 @@ body {
   }
 }
 
+@keyframes bar-fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes slide-up-out {
   0% {
     transform: translateY(0);

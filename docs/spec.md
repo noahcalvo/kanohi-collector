@@ -190,12 +190,8 @@ Ensure probabilities remain in [0,1] and do clamping with a cap (e.g., cannot re
 When a mask is pulled and user already owns at least one copy:
 
 ```
-essence_awarded = duplicate_value_by_rarity
+essence_awarded = 100
 ```
-
-- COMMON duplicate: 1 protodermis
-- RARE duplicate: 5 protodermis
-- MYTHIC duplicate: 50 protodermis
 
 Add `essence_awarded` to `user_masks.essence` (protodermis pool).
 
@@ -205,17 +201,15 @@ Add `essence_awarded` to `user_masks.essence` (protodermis pool).
 RequiredProtodermisToLevelUp(current_level, rarity) = base_by_rarity * current_level
 ```
 
-**base_by_rarity:**
-- COMMON = 5
-- RARE = 25
-- MYTHIC = 200
+**base:**
+- For all rarities = 500
 
 **Examples:**
-- COMMON Level 1→2: 5 × 1 = 5 protodermis
-- COMMON Level 2→3: 5 × 2 = 10 protodermis
-- COMMON Level 3→4: 5 × 3 = 15 protodermis
-- RARE Level 1→2: 25 × 1 = 25 protodermis (≈5 duplicates)
-- MYTHIC Level 1→2: 200 × 1 = 200 protodermis (≈4 duplicates)
+- COMMON Level 1→2: 500 × 1 = 500 protodermis
+- COMMON Level 2→3: 500 * 2 = 10 protodermis
+- COMMON Level 3→4: 500 × 3 = 1500 protodermis
+- RARE Level 1→2: 500 × 1 = 500 protodermis (≈5 duplicates)
+- MYTHIC Level 1→2: 500 × 1 = 500 protodermis (≈4 duplicates)
 
 Implementation: Store current_level and check if protodermis (essence field) >= base * current_level, then deduct and increment level. Repeat until not enough protodermis or max_level reached.
 

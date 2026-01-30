@@ -31,6 +31,11 @@ export function ArtCard({
   const touchMovedRef = useRef(false);
 
   const isSuppressedTarget = useCallback((target: EventTarget | null) => {
+    const targetNode = target instanceof Node ? target : null;
+    // If the pointer/focus is inside the popover content, keep the popover usable.
+    // (Buttons/inputs inside the popover are part of its UI.)
+    if (targetNode && popoverRef.current?.contains(targetNode)) return false;
+
     if (!(target instanceof Element)) return false;
     return (
       Boolean(target.closest('[data-popover-suppress="true"]')) ||
@@ -55,11 +60,13 @@ export function ArtCard({
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
+      // Update suppression immediately (important for mouse clicks, not just hover).
+      updateSuppressionFromTarget(e.target);
+
       if (e.pointerType !== "touch") return;
       setTouchMode(true);
       touchStartRef.current = { x: e.clientX, y: e.clientY };
       touchMovedRef.current = false;
-      updateSuppressionFromTarget(e.target);
     },
     [updateSuppressionFromTarget],
   );

@@ -14,8 +14,6 @@ export default async function SettingsPage() {
   const now = new Date();
   const ageDays = createdAt ? Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
-  console.log("user: ", me);
-
   return (
     <div className="card max-w-lg mx-auto mt-8">
       <h1 className="text-2xl font-bold mb-4">Settings</h1>

@@ -15,7 +15,6 @@ const items = [
   { href: "/", label: "Home", Icon: Home },
   { href: "/collection", label: "Collection", Icon: Package },
   { href: "/friends", label: "Friends", Icon: Users },
-  { href: "/shop", label: "Shop/Events", Icon: ShoppingBag },
 ] as const;
 
 const NPE_COLLECTION_TIP_SESSION_KEY = "kc_npe_collection_tip";

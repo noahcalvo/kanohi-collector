@@ -4,7 +4,9 @@ import { useState } from "react";
 import {
   buffPercent,
   getBuffDescription,
-  LEVEL_BASE_BY_RARITY,
+  computeMaskBuffValue,
+  formatBuffValue,
+  LEVEL_BASE,
   MAX_LEVEL_BY_RARITY,
 } from "../../lib/clientConstants";
 import { colorToHex } from "../../lib/colors";
@@ -35,7 +37,15 @@ function InlineColorRow({
       {unlockedColors.map((color) => (
         <button
           key={color}
-          onClick={() => onSelectColor(maskId, color)}
+          onPointerDown={(e) => {
+            // Prevent focus (which can trigger group-focus-within popovers),
+            // but allow the event to bubble so ArtCard can suppress hover popovers.
+            e.preventDefault();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectColor(maskId, color);
+          }}
           disabled={isChanging}
           className={`w-6 h-6 rounded-full border transition-all hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
             currentColor === color
@@ -62,7 +72,7 @@ function LevelEssenceDisplay({
 }) {
   const maxLevel = MAX_LEVEL_BY_RARITY[rarity];
   const essenceForNextLevel =
-    level < maxLevel ? LEVEL_BASE_BY_RARITY[rarity] * level : 0;
+    level < maxLevel ? LEVEL_BASE * level : 0;
   const progress =
     essenceForNextLevel > 0 ? (essence / essenceForNextLevel) * 100 : 100;
 
@@ -112,7 +122,15 @@ function ColorSelector({
       {colors.map((color) => (
         <button
           key={color}
-          onClick={() => onSelectColor(maskId, color)}
+          onPointerDown={(e) => {
+            // Prevent focus (which can trigger group-focus-within popovers),
+            // but allow the event to bubble so ArtCard can suppress hover popovers.
+            e.preventDefault();
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelectColor(maskId, color);
+          }}
           disabled={isChanging}
           className={`w-6 h-6 rounded-full border transition-all hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
             currentColor === color
@@ -135,6 +153,7 @@ export function EquippedMaskCard({
   rarity,
   transparent,
   buffType,
+  buffBaseValue,
   offsetY,
 }: {
   mask: UserMask;
@@ -144,8 +163,12 @@ export function EquippedMaskCard({
   rarity: Rarity;
   transparent?: boolean;
   buffType?: string;
+  buffBaseValue?: number;
   offsetY?: number;
 }) {
+  const buffValue = buffBaseValue
+    ? computeMaskBuffValue(buffBaseValue, mask.level)
+    : 0;
   return (
     <ArtCard
       popover={
@@ -161,6 +184,9 @@ export function EquippedMaskCard({
             <div className="mt-3 pt-3 border-t border-slate-200/70">
               <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
                 Buff: {buffType.replace("_", " ")}
+              </div>
+              <div className="text-sm font-semibold text-emerald-600 mt-1">
+                {formatBuffValue(buffType as any, buffValue)}
               </div>
               <div className="text-xs text-slate-600 mt-1">
                 {getBuffDescription(buffType as any)}
@@ -256,6 +282,12 @@ export function CollectionMaskCard({
   const displayColor =
     selectedColor ?? mask.equipped_color ?? mask.unlocked_colors[0];
 
+  // Compute buff value based on current level and equipped slot
+  const buffValue = computeMaskBuffValue(
+    mask.buff_base_value,
+    mask.level
+  );
+
   return (
     <ArtCard
       badge={
@@ -273,6 +305,9 @@ export function CollectionMaskCard({
           <div className="mt-3 pt-3 border-t border-slate-200/70">
             <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
               Buff: {mask.buff_type.replace("_", " ")}
+            </div>
+            <div className="text-sm font-semibold text-emerald-600 mt-1">
+              {formatBuffValue(mask.buff_type, buffValue)}
             </div>
             <div className="text-xs text-slate-600 mt-1">
               {getBuffDescription(mask.buff_type)}

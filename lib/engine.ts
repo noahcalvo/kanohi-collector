@@ -1,11 +1,11 @@
 import { randomUUID } from "crypto";
-import { computeBuffs } from "./buffs";
+import { computeBuffs, noBuffs } from "./buffs";
 import {
   DISCOVERY_ATTEMPTS_LIMIT,
   DISCOVERY_REROLL_CAP,
-  DUPLICATE_ESSENCE_BY_RARITY,
+  DUPLICATE_ESSENCE,
   GLOBAL_SEED_SALT,
-  LEVEL_BASE_BY_RARITY,
+  LEVEL_BASE,
   PACK_UNITS_PER_PACK,
   PACK_UNIT_SECONDS,
   PITY_THRESHOLD,
@@ -179,7 +179,7 @@ export async function openTutorialCommonsOnlyPack(
     userMasks.filter((m) => m.owned_count > 0).map((m) => m.mask_id),
   );
 
-  const buffs = await computeBuffs(user.id, store);
+  const buffs = await noBuffs();
   const seed =
     opts?.seed ??
     `${user.id}-${Date.now()}-${GLOBAL_SEED_SALT}-tutorial-commons-only`;
@@ -204,8 +204,8 @@ export async function openTutorialCommonsOnlyPack(
 
     let essenceAwarded = 0;
     if (!isNew) {
-      const baseEssence = DUPLICATE_ESSENCE_BY_RARITY[rarityKey];
-      essenceAwarded = Math.round(baseEssence * (1 + buffs.duplicate_eff));
+      const baseEssence = DUPLICATE_ESSENCE;
+      essenceAwarded = Math.round(baseEssence * (1 + buffs.protodermis));
       userMask.essence += essenceAwarded;
     }
 
@@ -308,6 +308,7 @@ function sampleColor(
   def: Mask,
   unlockedColors: string[],
   rand: () => number,
+  colorVariantBonus = 0,
 ): string {
   // Get available colors based on rarity
   const allNonStandardColors = getAvailableColors(
@@ -326,13 +327,16 @@ function sampleColor(
   // - Original color gets 20%
   // - Remaining colors split the other 20%
   // - Standard gets 60%
+  // Color variant bonus increases chance to get non-standard colors
+  // Max bonus is 100% increase (i.e., double the chance)
   const colorWeights: Record<string, number> = {};
   const numRemaining = remainingColors.length;
-  const otherColorProb = 0.2 / numRemaining;
+  const colorBuffMultiplier = 1 + colorVariantBonus;
+  const otherColorProb = 0.2 * colorBuffMultiplier / numRemaining;
 
-  colorWeights["standard"] = 0.6;
+  colorWeights["standard"] = 0.6 - (0.4 * colorVariantBonus);
   for (const color of remainingColors) {
-    colorWeights[color] = color === def.original_color ? 0.2 : otherColorProb;
+    colorWeights[color] = color === def.original_color ? 0.2 * colorBuffMultiplier : otherColorProb;
   }
 
   const colors = Object.keys(colorWeights);
@@ -401,7 +405,7 @@ function addColor(unlocked: string[], color: string): string[] {
 }
 
 function applyLeveling(mask: UserMask, def: Mask): UserMask {
-  const base = LEVEL_BASE_BY_RARITY[def.base_rarity];
+  const base = LEVEL_BASE;
   const maxLevel = def.max_level;
   while (mask.level < maxLevel) {
     const cost = base * mask.level;
@@ -491,7 +495,7 @@ export async function openPackForUser(
   );
 
   const buffs = await computeBuffs(user.id, store);
-  const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
+  const refreshed = refreshFractionalUnits({ ...progress }, buffs.cd_reduction);
   if (refreshed.fractional_units < PACK_UNITS_PER_PACK) {
     throw new Error("Pack not ready");
   }
@@ -506,8 +510,8 @@ export async function openPackForUser(
   for (let i = 0; i < pack.masks_per_pack; i += 1) {
     const rarity =
       pityFlag && i === 0
-        ? sampleRarityForceRarePlus(buffs.pack_luck, rand)
-        : sampleRarityWithPackLuck(buffs.pack_luck, rand);
+        ? sampleRarityForceRarePlus(buffs.rarity_odds, rand)
+        : sampleRarityWithPackLuck(buffs.rarity_odds, rand);
     if (rarity !== "COMMON") sawRarePlus = true;
 
     const exclude = new Set<string>();
@@ -518,14 +522,14 @@ export async function openPackForUser(
     const color =
       mask.base_rarity === "MYTHIC"
         ? mask.original_color
-        : sampleColor(mask, userMask.unlocked_colors, rand);
+        : sampleColor(mask, userMask.unlocked_colors, rand, buffs.color_variants);
     const isNew = userMask.owned_count === 0;
     const rarityKey = mask.base_rarity;
 
     let essenceAwarded = 0;
     if (!isNew) {
-      const baseEssence = DUPLICATE_ESSENCE_BY_RARITY[rarityKey];
-      essenceAwarded = Math.round(baseEssence * (1 + buffs.duplicate_eff));
+      const baseEssence = DUPLICATE_ESSENCE;
+      essenceAwarded = Math.round(baseEssence * (1 + buffs.protodermis));
       userMask.essence += essenceAwarded;
     }
 
@@ -644,7 +648,7 @@ export async function packStatus(
     await store.upsertUserPackProgress(progress);
   }
   const buffs = opts?.buffs ?? (await computeBuffs(user.id, store));
-  const refreshed = refreshFractionalUnits({ ...progress }, buffs.timer_speed);
+  const refreshed = refreshFractionalUnits({ ...progress }, buffs.cd_reduction);
 
   if (PACK_UNIT_SECONDS <= 0) {
     return {
@@ -658,8 +662,7 @@ export async function packStatus(
   const timeSince = Math.floor(
     (Date.now() - refreshed.last_unit_ts.getTime()) / 1000,
   );
-  const speedMultiplier = 1 + buffs.timer_speed;
-  const unitsGained = (timeSince * speedMultiplier) / PACK_UNIT_SECONDS;
+  const speedMultiplier = 1 + buffs.cd_reduction;
   const unitsNeeded = Math.max(
     PACK_UNITS_PER_PACK - refreshed.fractional_units,
     0,
@@ -713,6 +716,7 @@ export async function mePayload(
       equipped_color: um.equipped_color,
       transparent: def?.transparent,
       buff_type: def?.buff_type ?? "VISUAL",
+      buff_base_value: def?.buff_base_value ?? 0,
       description: def?.description ?? "",
       origin: def?.origin ?? "",
       offsetY: def?.maskOffsetY ?? 0,

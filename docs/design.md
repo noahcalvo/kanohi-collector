@@ -240,13 +240,13 @@ determinism & randomness:
 
 # Leveling & Protodermis — exact implementation rules (MVP)
 
-* Duplicate protodermis awards: COMMON=1, RARE=5, MYTHIC=50.
-* base_by_rarity for level cost: COMMON=5, RARE=25, MYTHIC=200 protodermis.
+* Duplicate protodermis awards: 100
+* base for level cost: 500
 * Level up rule (MVP chosen): consume protodermis when leveling. Implementation:
 
   ```
   while user_mask.essence >= cost_for_next_level:
-    cost_for_next_level = base_by_rarity * user_mask.level
+    cost_for_next_level = base * user_mask.level
     if user_mask.essence < cost_for_next_level:
       break
     user_mask.essence -= cost_for_next_level
@@ -255,15 +255,15 @@ determinism & randomness:
       break
   ```
   
-  **Formula:** To level from L to L+1 requires `base_by_rarity * L` protodermis.
-  - Level 1→2: COMMON needs 5×1=5, RARE needs 25×1=25, MYTHIC needs 200×1=200
-  - Level 2→3: COMMON needs 5×2=10, RARE needs 25×2=50, MYTHIC needs 200×2=400
-  - Level 3→4: COMMON needs 5×3=15, RARE needs 25×3=75, MYTHIC needs 200×3=600
+  **Formula:** To level from L to L+1 requires `base * L` protodermis.
+  - Level 1→2: 500
+  - Level 2→3: 1000
+  - Level 3→4: 1500
 * Persist `level` and `essence` (protodermis pool); write an event for each `level_up`.
 
 Buff value compute:
 
-* effective_value = buff_base_value * level * (slot == TURAGA ? 0.5 : 1.0)
+* effective_value = base * level * (slot == TURAGA ? 0.5 : 1.0)
 * friend contributions: sum up to max 5 friends contributing friend_buff_per_friend each (configurable).
 
 Total pack luck used in draw = clamp(sum of all pack_luck sources, 0, global_pack_luck_cap).

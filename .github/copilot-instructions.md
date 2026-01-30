@@ -11,7 +11,7 @@
 - IDs: `mask_id` is stable text; user primary IDs are Clerk IDs (string). Use DB-generated IDs (e.g. CUID) for internal rows.
 - Packs: 2 pulls per open; pity after 20 packs guarantees ≥1 Rare+; rarity bases COMMON 0.945, RARE 0.05, MYTHIC 0.005; pack luck buff caps at +20% rare+ mass.
 - Buff math: Toa = 100%, Turaga = 50%; friend buff small and capped (≤5 friends). Discovery rerolls duplicates with ≤50% chance, max 3 attempts.
-- Leveling: protodermis from duplicates (1/5/50 by rarity); cost = base_by_rarity * current_level (COMMON 5, RARE 25, MYTHIC 200); consume essence on level-up; respect `max_level`.
+- Leveling: protodermis from duplicates 100; cost = 500 * current_level; consume essence on level-up; respect `max_level`.
 
 ### API & Behavior Guardrails
 - `GET /api/me` is source of truth (equipped masks, buffs, timers, unlocked colors). Only add caching if it can’t cause stale game state.

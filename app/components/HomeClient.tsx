@@ -156,6 +156,16 @@ export function HomeClient({
     [currentMe?.collection],
   );
 
+  const maskBuffBaseValueById = useMemo(
+    () =>
+      new Map(
+        currentMe?.collection?.map(
+          (m) => [m.mask_id, m.buff_base_value] as const,
+        ) ?? [],
+      ),
+    [currentMe?.collection],
+  );
+
   const equippedToa =
     currentMe?.equipped.find((m) => m.equipped_slot === "TOA") ?? null;
   const equippedTuraga =
@@ -318,8 +328,8 @@ export function HomeClient({
       </section>
 
       <section className="flex flex-col items-center gap-3">
+        {currentStatus?.pack_ready && (
         <button
-          className="button-primary text-lg px-10 py-4"
           onClick={openPack}
           disabled={!currentStatus?.pack_ready || opening || packOverlayOpen}
         >
@@ -328,9 +338,9 @@ export function HomeClient({
             : statusLoading
               ? "Checking..."
             : currentStatus?.pack_ready
-              ? "Open Pack"
+              ? <img src="/pack/pack.png" alt="Open Pack" className="hover:scale-105 transition shadow-lg"/>
               : "Not ready"}
-        </button>
+        </button>)}
       </section>
 
       {currentMe && (
@@ -351,6 +361,7 @@ export function HomeClient({
                 rarity={maskRarityById.get(equippedToa.mask_id) ?? "COMMON"}
                 transparent={maskTransparentById.get(equippedToa.mask_id)}
                 buffType={maskBuffTypeById.get(equippedToa.mask_id) ?? "VISUAL"}
+                buffBaseValue={maskBuffBaseValueById.get(equippedToa.mask_id) ?? 0}
                 offsetY={maskOffsetYById.get(equippedToa.mask_id) ?? 0}
               />
             ) : (
@@ -372,6 +383,7 @@ export function HomeClient({
                 buffType={
                   maskBuffTypeById.get(equippedTuraga.mask_id) ?? "VISUAL"
                 }
+                buffBaseValue={maskBuffBaseValueById.get(equippedTuraga.mask_id) ?? 0}
                 offsetY={maskOffsetYById.get(equippedTuraga.mask_id) ?? 0}
               />
             ) : (

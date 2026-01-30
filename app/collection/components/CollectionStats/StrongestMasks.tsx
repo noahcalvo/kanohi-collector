@@ -2,7 +2,7 @@
 
 import { Crown } from "lucide-react";
 import {
-  DUPLICATE_ESSENCE_BY_RARITY,
+  DUPLICATE_ESSENCE,
   MAX_LEVEL_BY_RARITY,
 } from "../../../../lib/constants";
 import { CollectionMask } from "../../../../lib/types";
@@ -17,7 +17,7 @@ export function StrongestMasks({
     return (
       (mask.level - 1) * MAX_LEVEL_BY_RARITY[mask.rarity] +
       (mask.essence || 0) +
-      DUPLICATE_ESSENCE_BY_RARITY[mask.rarity]
+      DUPLICATE_ESSENCE
     );
   };
 

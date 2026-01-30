@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { LEVEL_BASE } from "../../lib/clientConstants";
 import type { DrawResultItem } from "../../lib/types";
 
 export function ProtodermisProgressBar({
@@ -70,16 +71,14 @@ export function ProtodermisProgressBar({
       >
         {(() => {
           // Calculate progress percentage towards next level
-          const baseEssence =
-            item.rarity === "COMMON" ? 5 : item.rarity === "RARE" ? 25 : 200;
-          const requiredForNextLevel = baseEssence * displayLevel;
+          const requiredForNextLevel = LEVEL_BASE * displayLevel;
+
           const progressPercent =
             requiredForNextLevel > 0
               ? Math.min((displayEssence / requiredForNextLevel) * 100, 100)
               : 0;
 
           const leveledUp = displayLevel > item.level_before;
-
           return (
             <>
               {item.essence_awarded > 0 && (
@@ -90,7 +89,9 @@ export function ProtodermisProgressBar({
                       className="absolute inset-y-0 left-0 bg-gradient-to-r from-sky-400 to-emerald-400 rounded-full"
                       style={
                         {
-                          animation: "fill-progress 1s ease-out forwards",
+                          animation:
+                            "fill-progress 1s ease-out forwards, bar-fade-out 0.2s ease-out forwards",
+                          animationDelay: "0s, 1s",
                           "--progress-width": "100%",
                         } as React.CSSProperties
                       }
@@ -105,7 +106,7 @@ export function ProtodermisProgressBar({
                             animation: "fill-progress 0.6s ease-out forwards",
                             animationDelay: "1s",
                             "--progress-width": `${progressPercent}%`,
-                            opacity: 0,
+                            width: "0%",
                           } as React.CSSProperties)
                         : ({
                             animation: "fill-progress 1s ease-out forwards",

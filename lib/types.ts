@@ -1,11 +1,14 @@
 export type Rarity = "COMMON" | "RARE" | "MYTHIC";
 export type BuffType =
-  | "PACK_LUCK"
-  | "TIMER_SPEED"
-  | "DUPLICATE_EFF"
+  | "RARITY_ODDS"
+  | "CD_REDUCTION"
+  | "PROTODERMIS"
   | "DISCOVERY"
-  | "VISUAL"
-  | "INSPECT";
+  | "COLOR_VARIANTS"
+  | "INSPECTION"
+  | "FRIEND_BONUS"
+  | "PACK_STACKING"
+  | "VISUAL";
 export type EquipSlot = "NONE" | "TOA" | "TURAGA";
 
 export interface Mask {
@@ -117,6 +120,7 @@ export interface CollectionMask {
   equipped_color: string;
   transparent?: boolean;
   buff_type: BuffType;
+  buff_base_value: number;
   description: string;
   origin: string;
   offsetY?: number;
@@ -141,9 +145,12 @@ export interface StatusPayload {
 }
 
 export interface BuffTotals {
-  pack_luck: number;
-  timer_speed: number;
-  duplicate_eff: number;
+  rarity_odds: number;
+  cd_reduction: number;
+  protodermis: number;
   discovery: number;
-  inspect: number;
+  inspection: number;
+  color_variants: number;
+  friend_bonus: number;
+  pack_stacking: number;
 }
