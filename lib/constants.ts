@@ -22,7 +22,7 @@ export const MAX_LEVEL_BY_RARITY = {
   MYTHIC: 3,
 };
 
-const PACK_UNIT_SECONDS_DEFAULT = 43200 / 5; // 5 units per 12h -> 1 pack
+const PACK_UNIT_SECONDS_DEFAULT = 21600 / 5; // 5 units per 6h -> 1 pack
 const PACK_UNIT_SECONDS_ENV = process.env.PACK_UNIT_SECONDS ?? process.env.NEXT_PUBLIC_PACK_UNIT_SECONDS;
 const parsedPackUnitSeconds = PACK_UNIT_SECONDS_ENV ? Number(PACK_UNIT_SECONDS_ENV) : PACK_UNIT_SECONDS_DEFAULT;
 export const PACK_UNIT_SECONDS = Number.isFinite(parsedPackUnitSeconds) ? parsedPackUnitSeconds : PACK_UNIT_SECONDS_DEFAULT;
