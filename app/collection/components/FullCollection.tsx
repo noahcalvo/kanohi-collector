@@ -4,6 +4,8 @@ import { HeroImage } from "../../components/HeroImage";
 
 export default function FullCollectionSection({ masks }: { masks: CollectionMask[] }) {
   const [visible, setVisible] = useState(false);
+  // Sort masks by mask_id for consistent display
+  const sortedMasks = [...masks].sort((a, b) => a.mask_id.localeCompare(b.mask_id));
   // Sync with toggle via a simple event approach could be done; for simplicity keep local toggle here
   return (
     <section className="card">
@@ -29,7 +31,7 @@ export default function FullCollectionSection({ masks }: { masks: CollectionMask
       </button>
       {visible && (
         <div className="mt-4 grid grid-cols-3 md:grid-cols-6 gap-4">
-          {masks.flatMap((m) =>
+          {sortedMasks.flatMap((m) =>
             (m.unlocked_colors.length
               ? m.unlocked_colors
               : [m.equipped_color]

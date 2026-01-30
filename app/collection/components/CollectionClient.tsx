@@ -116,7 +116,7 @@ export function CollectionClient({
     };
   }, [currentMe?.equipped, currentMe?.collection, maskNameById]);
 
-  // Group masks by generation, then by rarity
+  // Group masks by generation, then by rarity, sorted by mask_id
   const masksByGeneration = useMemo(() => {
     if (!currentMe?.collection)
       return new Map<number, Map<Rarity, CollectionMask[]>>();
@@ -134,6 +134,13 @@ export function CollectionClient({
         genGroup.set(mask.rarity, []);
       }
       genGroup.get(mask.rarity)!.push(mask);
+    });
+
+    // Sort masks within each rarity group by mask_id
+    grouped.forEach((genMap) => {
+      genMap.forEach((masks) => {
+        masks.sort((a, b) => a.mask_id.localeCompare(b.mask_id));
+      });
     });
 
     return grouped;

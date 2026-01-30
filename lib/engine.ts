@@ -717,7 +717,7 @@ export async function mePayload(
       origin: def?.origin ?? "",
       offsetY: def?.maskOffsetY ?? 0,
     };
-  });
+  }).sort((a, b) => a.mask_id.localeCompare(b.mask_id));
 
   return {
     user,
