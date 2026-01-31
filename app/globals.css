@@ -15,7 +15,12 @@ a {
 body {
   margin: 0;
   min-height: 100vh;
-  @apply bg-slate-50 text-slate-900;
+  @apply text-slate-900;
+  background: transparent;
+}
+
+html {
+  background-color: #f8fafc; /* slate-50 fallback */
 }
 
 .button-primary {

@@ -32,13 +32,20 @@ export default function RootLayout({
     !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.includes("placeholder");
 
   const content = (
-    <html lang="en" className={voyanui.variable}>
-      <body className="antialiased bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 text-slate-900 min-h-screen flex flex-col font-sans max-h-screen overflow-y-auto">
+    <html
+      lang="en"
+      className={`${voyanui.variable} bg-gradient-to-br from-orange-500 via-sky-500 to-slate-100 bg-fixed`}
+    >
+      <body className="antialiased bg-transparent text-slate-900 min-h-screen flex flex-col font-sans relative isolate">
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 pointer-events-none"
+        />
         <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10 space-y-8 pb-32">
           {children}
         </main>
 
-        <div className="fixed inset-x-0 bottom-0 z-[150] backdrop-blur bg-white/30">
+        <div className="fixed inset-x-0 bottom-0 z-[150] backdrop-blur">
           <div className="w-full px-4 pb-6">
             <div className="max-w-5xl mx-auto">
               <Suspense fallback={null}>
