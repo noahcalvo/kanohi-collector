@@ -1,5 +1,6 @@
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from '@vercel/analytics/next';
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Suspense } from "react";
@@ -48,6 +49,7 @@ export default function RootLayout({
             </div>
           </div>
         </div>
+        <Analytics />
       </body>
     </html>
   );
