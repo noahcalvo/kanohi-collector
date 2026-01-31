@@ -1,9 +1,9 @@
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { getRequestId, jsonError, jsonOk, startRouteSpan } from "../../../../../lib/api/routeUtils";
 import { getUserId } from "../../../../../lib/auth";
-import { equipMask } from "../../../../../lib/engine";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "../../../../../lib/db/prisma";
+import { equipMask } from "../../../../../lib/engine";
 import { createPrismaStore } from "../../../../../lib/store/prismaStore";
 
 const schema = z.object({
