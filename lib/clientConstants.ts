@@ -1,6 +1,7 @@
 // Client-safe constants that can be imported in browser code
 // These are re-exported from constants.ts to avoid pulling in server-only dependencies
 
+import { PACK_UNIT_SECONDS } from "./constants";
 import type { BuffType, EquipSlot } from "./types";
 
 export const LEVEL_BASE = 500
@@ -12,9 +13,8 @@ export const MAX_LEVEL_BY_RARITY = {
 };
 
 // Pack cooldown constants (client-safe subset)
-export const PACK_UNIT_SECONDS_DEFAULT = 43200 / 5; // 5 units per 12h
 export const PACK_UNITS_PER_PACK = 5;
-export const TOTAL_PACK_COOLDOWN_SECONDS = PACK_UNIT_SECONDS_DEFAULT * PACK_UNITS_PER_PACK;
+export const TOTAL_PACK_COOLDOWN_SECONDS = PACK_UNIT_SECONDS * PACK_UNITS_PER_PACK;
 
 // Helper function for displaying buff percentages based on equip slot
 export function buffPercent(slot: EquipSlot): string {

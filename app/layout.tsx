@@ -20,8 +20,6 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Kanohi Collector",
   },
-  themeColor: "#000000",
-
 };
 
 export default function RootLayout({

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import type { EquipSlot } from "../../lib/types";
 import { formatApiErrorMessage } from "../lib/errors";
-import { fetchJson } from "../lib/fetchJson";
+import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
@@ -28,6 +28,17 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
       setEquipping(equipLabel(maskId, slot));
       setEquipError(null);
 
+      const tryEquip = async (confirmPackTrim: boolean) => {
+        await fetchJson(`/api/mask/${maskId}/equip`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slot,
+            ...(confirmPackTrim ? { confirm_pack_trim: true } : {}),
+          }),
+        });
+      };
+
       try {
         // If a color is provided, set it first
         if (color) {
@@ -38,11 +49,27 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
           });
         }
 
-        await fetchJson(`/api/mask/${maskId}/equip`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slot }),
-        });
+        try {
+          await tryEquip(false);
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 409) {
+            const body = err.body as any;
+            if (body?.code === "PACK_STORAGE_TRIM_CONFIRM") {
+              const stored = Number(body?.stored_packs ?? NaN);
+              const nextCap = Number(body?.next_pack_cap ?? NaN);
+              const excess = Number(body?.excess_packs ?? NaN);
+              const ok = window.confirm(
+                `This will reduce your pack storage to ${nextCap}. You currently have ${stored} packs saved.\n\nIf you continue, you'll lose ${excess} pack${excess === 1 ? "" : "s"}.`,
+              );
+              if (!ok) return;
+              await tryEquip(true);
+            } else {
+              throw err;
+            }
+          } else {
+            throw err;
+          }
+        }
 
         await refreshMe();
       } catch (err) {

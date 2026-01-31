@@ -140,8 +140,14 @@ export interface MePayload {
 export interface StatusPayload {
   pack_ready: boolean;
   time_to_ready: number;
+  // Time until the NEXT full pack is awarded (i.e., until stored_packs increments by 1).
+  // Null when earning is paused (storage full).
+  time_to_next_pack: number | null;
   fractional_units: number;
   pity_counter: number;
+  stored_packs: number;
+  pack_cap: number;
+  earning_paused: boolean;
 }
 
 export interface BuffTotals {

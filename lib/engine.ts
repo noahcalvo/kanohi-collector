@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
-import { computeBuffs, noBuffs } from "./buffs";
+import { computeBuffs, computeBuffsFromUserMasks, noBuffs } from "./buffs";
 import {
+  BASE_PACK_STORAGE_CAP,
   DISCOVERY_ATTEMPTS_LIMIT,
   DISCOVERY_REROLL_CAP,
   DUPLICATE_ESSENCE,
@@ -37,9 +38,9 @@ function nowSeconds(): number {
 
 function refreshFractionalUnits<
   T extends { fractional_units: number; last_unit_ts: Date },
->(progress: T, timerSpeedBonus: number): T {
+>(progress: T, timerSpeedBonus: number, maxUnits: number = PACK_UNITS_PER_PACK): T {
   if (PACK_UNIT_SECONDS <= 0) {
-    progress.fractional_units = PACK_UNITS_PER_PACK;
+    progress.fractional_units = maxUnits;
     progress.last_unit_ts = new Date();
     return progress;
   }
@@ -53,7 +54,7 @@ function refreshFractionalUnits<
   if (unitsGained > 0) {
     progress.fractional_units = Math.min(
       progress.fractional_units + unitsGained,
-      PACK_UNITS_PER_PACK,
+      maxUnits,
     );
     // Set last_unit_ts to the time when the most recent unit was earned
     const newTimestampSeconds =
@@ -62,6 +63,40 @@ function refreshFractionalUnits<
   }
   // If no units were gained, do not update last_unit_ts
   return progress;
+}
+
+function getPackStorageCapFromBuffs(buffs: Awaited<ReturnType<typeof computeBuffs>>): number {
+  // Storage buffs only count in whole packs.
+  // We floor the TOTAL aggregated buff (after TOA/TURAGA multipliers), matching
+  // how other buffs aggregate additively before clamping.
+  const bonus = Math.floor(buffs.pack_stacking ?? 0);
+  return Math.max(BASE_PACK_STORAGE_CAP + bonus, 0);
+}
+
+function refreshFractionalUnitsWithCap<
+  T extends { fractional_units: number; last_unit_ts: Date },
+>(progress: T, timerSpeedBonus: number, capUnits: number): T {
+  const maxUnits = Math.max(capUnits, 0);
+  if (progress.fractional_units >= maxUnits) {
+    progress.fractional_units = maxUnits;
+    // Earning is paused at cap: reset the timer so no backlog accrues.
+    progress.last_unit_ts = new Date();
+    return progress;
+  }
+
+  const beforeUnits = progress.fractional_units;
+  const beforeTs = progress.last_unit_ts.getTime();
+  const refreshed = refreshFractionalUnits(progress, timerSpeedBonus, maxUnits);
+  if (refreshed.fractional_units >= maxUnits) {
+    refreshed.fractional_units = maxUnits;
+    refreshed.last_unit_ts = new Date();
+  }
+
+  // If we clamped or gained units, refreshed contains the updated timestamp/units.
+  // (Callers decide whether to persist.)
+  void beforeUnits;
+  void beforeTs;
+  return refreshed;
 }
 
 function seededRandom(seed: string): () => number {
@@ -133,7 +168,6 @@ const COLOR_PALETTES_BY_SET_AND_RARITY: Record<
       "brown",
       "white",
       "black",
-      "gold",
     ],
     MYTHIC: ["standard"],
   },
@@ -157,7 +191,6 @@ const DEFAULT_COLORS_BY_RARITY: Record<Rarity, string[]> = {
     "brown",
     "white",
     "black",
-    "gold",
   ],
   MYTHIC: ["standard"],
 };
@@ -495,7 +528,13 @@ export async function openPackForUser(
   );
 
   const buffs = await computeBuffs(user.id, store);
-  const refreshed = refreshFractionalUnits({ ...progress }, buffs.cd_reduction);
+  const packCap = getPackStorageCapFromBuffs(buffs);
+  const capUnits = packCap * PACK_UNITS_PER_PACK;
+  const refreshed = refreshFractionalUnitsWithCap(
+    { ...progress },
+    buffs.cd_reduction,
+    capUnits,
+  );
   if (refreshed.fractional_units < PACK_UNITS_PER_PACK) {
     throw new Error("Pack not ready");
   }
@@ -648,14 +687,39 @@ export async function packStatus(
     await store.upsertUserPackProgress(progress);
   }
   const buffs = opts?.buffs ?? (await computeBuffs(user.id, store));
-  const refreshed = refreshFractionalUnits({ ...progress }, buffs.cd_reduction);
+  const packCap = getPackStorageCapFromBuffs(buffs);
+  const capUnits = packCap * PACK_UNITS_PER_PACK;
+  const refreshed = refreshFractionalUnitsWithCap(
+    { ...progress },
+    buffs.cd_reduction,
+    capUnits,
+  );
+
+  // Persist progress if we realized time-based earnings or if we paused at cap.
+  // This is required so users can't accrue a backlog while capped.
+  if (
+    refreshed.fractional_units !== progress.fractional_units ||
+    refreshed.last_unit_ts.getTime() !== progress.last_unit_ts.getTime()
+  ) {
+    await store.upsertUserPackProgress({ ...progress, ...refreshed });
+    progress = { ...progress, ...refreshed };
+  }
 
   if (PACK_UNIT_SECONDS <= 0) {
+    const storedPacks = Math.min(
+      Math.floor(refreshed.fractional_units / PACK_UNITS_PER_PACK),
+      packCap,
+    );
+    const earningPaused = refreshed.fractional_units >= capUnits;
     return {
       pack_ready: true,
       time_to_ready: 0,
-      fractional_units: PACK_UNITS_PER_PACK,
+      time_to_next_pack: earningPaused ? null : 0,
+      fractional_units: Math.min(refreshed.fractional_units, capUnits),
       pity_counter: refreshed.pity_counter,
+      stored_packs: storedPacks,
+      pack_cap: packCap,
+      earning_paused: earningPaused,
     };
   }
 
@@ -672,12 +736,26 @@ export async function packStatus(
       Math.ceil((unitsNeeded * PACK_UNIT_SECONDS) / speedMultiplier),
       0,
     ) - timeSince;
+  const storedPacks = Math.floor(refreshed.fractional_units / PACK_UNITS_PER_PACK);
+  const earningPaused = refreshed.fractional_units >= capUnits;
+
+  const nextPackTargetUnits = Math.min(storedPacks + 1, packCap) * PACK_UNITS_PER_PACK;
+  const unitsNeededNextPack = Math.max(nextPackTargetUnits - refreshed.fractional_units, 0);
+  const timeToNextPack =
+    Math.max(
+      Math.ceil((unitsNeededNextPack * PACK_UNIT_SECONDS) / speedMultiplier),
+      0,
+    ) - timeSince;
+
   const result = {
-    pack_ready: refreshed.fractional_units >= PACK_UNITS_PER_PACK,
-    time_to_ready:
-      refreshed.fractional_units >= PACK_UNITS_PER_PACK ? 0 : timeToReady,
+    pack_ready: storedPacks >= 1,
+    time_to_ready: storedPacks >= 1 ? 0 : timeToReady,
+    time_to_next_pack: earningPaused ? null : Math.max(timeToNextPack, 0),
     fractional_units: refreshed.fractional_units,
     pity_counter: refreshed.pity_counter,
+    stored_packs: storedPacks,
+    pack_cap: packCap,
+    earning_paused: earningPaused,
   };
   return result;
 }
@@ -772,14 +850,93 @@ export async function equipMask(
   maskId: string,
   slot: EquipSlot,
   store: GameStore = prismaStore,
+  opts?: { confirm_pack_trim?: boolean },
 ) {
   const user = await store.getOrCreateUser(guest, userId);
   const target = await store.getUserMask(user.id, maskId);
   if (!target) throw new Error("User does not own mask");
 
+  // If this equip action could reduce pack storage, enforce confirmation and
+  // keep pack progress consistent with the new cap.
+  // Today, only the daily pack exists; this logic is scoped to it.
+  const PACK_ID = "free_daily_v1";
+
+  // Load current state.
+  const masks = await store.getUserMasks(user.id);
+  const currentBuffs = computeBuffsFromUserMasks(masks);
+  const currentCap = getPackStorageCapFromBuffs(currentBuffs);
+  const currentCapUnits = currentCap * PACK_UNITS_PER_PACK;
+
+  // Lock progress so cap checks + trimming serialize with pack opens.
+  let progress = await store.lockUserPackProgress(user.id, PACK_ID);
+  if (!progress) {
+    progress = {
+      user_id: user.id,
+      pack_id: PACK_ID,
+      fractional_units: PACK_UNITS_PER_PACK,
+      last_unit_ts: new Date(),
+      pity_counter: 0,
+      last_pack_claim_ts: null,
+    };
+    await store.upsertUserPackProgress(progress);
+    progress = (await store.lockUserPackProgress(user.id, PACK_ID)) ?? progress;
+  }
+
+  // Safety: clamp any legacy overfill to the current cap before proceeding.
+  if (progress.fractional_units > currentCapUnits) {
+    progress = {
+      ...progress,
+      fractional_units: currentCapUnits,
+      last_unit_ts: new Date(),
+    };
+    await store.upsertUserPackProgress(progress);
+  }
+
+  const storedPacks = Math.floor(progress.fractional_units / PACK_UNITS_PER_PACK);
+
+  // Simulate the post-equip mask layout to compute the new cap.
+  const simulated = masks.map((m) => ({ ...m }));
+
+  // Clear slot occupancy if another mask is there.
+  if (slot !== "NONE") {
+    for (const m of simulated) {
+      if (m.equipped_slot === slot && m.mask_id !== maskId) {
+        m.equipped_slot = "NONE";
+      }
+    }
+  }
+
+  // Apply the target slot.
+  for (const m of simulated) {
+    if (m.mask_id === maskId) {
+      m.equipped_slot = slot;
+    }
+  }
+
+  const nextBuffs = computeBuffsFromUserMasks(simulated);
+  const nextCap = getPackStorageCapFromBuffs(nextBuffs);
+  const nextCapUnits = nextCap * PACK_UNITS_PER_PACK;
+
+  if (storedPacks > nextCap && !opts?.confirm_pack_trim) {
+    const excess = storedPacks - nextCap;
+    throw Object.assign(
+      new Error(
+        `Removing this mask reduces your pack storage to ${nextCap}. You currently have ${storedPacks} packs stored. Confirm to lose ${excess} pack${excess === 1 ? "" : "s"}.`,
+      ),
+      {
+        statusCode: 409,
+        extra: {
+          code: "PACK_STORAGE_TRIM_CONFIRM",
+          stored_packs: storedPacks,
+          next_pack_cap: nextCap,
+          excess_packs: excess,
+        },
+      },
+    );
+  }
+
   // clear slot occupancy if another mask is there
   if (slot !== "NONE") {
-    const masks = await store.getUserMasks(user.id);
     await Promise.all(
       masks
         .filter((m) => m.equipped_slot === slot && m.mask_id !== maskId)
@@ -791,6 +948,29 @@ export async function equipMask(
 
   target.equipped_slot = slot;
   await store.upsertUserMask(target);
+
+  // If confirmed and we are now over the new cap, trim units down to the new cap.
+  // This may discard partial progress above the cap, which is expected: earning
+  // is paused at cap and should not accumulate.
+  if (progress.fractional_units > nextCapUnits) {
+    await store.upsertUserPackProgress({
+      ...progress,
+      fractional_units: nextCapUnits,
+      last_unit_ts: new Date(),
+    });
+
+    await store.appendEvent({
+      event_id: randomUUID(),
+      user_id: user.id,
+      type: "pack_trim",
+      payload: {
+        pack_id: PACK_ID,
+        next_pack_cap: nextCap,
+      },
+      timestamp: new Date(),
+    });
+  }
+
   await store.appendEvent({
     event_id: randomUUID(),
     user_id: user.id,

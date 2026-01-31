@@ -69,13 +69,8 @@ export function noBuffs(): BuffTotals {
   };
 }
 
-export async function computeBuffs(
-  userId: string,
-  store: GameStore,
-): Promise<BuffTotals> {
-  const masks = (await store.getUserMasks(userId)).filter(
-    (m) => m.equipped_slot !== "NONE",
-  );
+export function computeBuffsFromUserMasks(userMasks: UserMask[]): BuffTotals {
+  const masks = userMasks.filter((m) => m.equipped_slot !== "NONE");
   const totals = masks.reduce<BuffTotals>(
     (acc, mask) => {
       const val = maskBuffValue(mask);
@@ -115,4 +110,12 @@ export async function computeBuffs(
     friend_bonus: totals.friend_bonus,
     pack_stacking: totals.pack_stacking,
   };
+}
+
+export async function computeBuffs(
+  userId: string,
+  store: GameStore,
+): Promise<BuffTotals> {
+  const masks = await store.getUserMasks(userId);
+  return computeBuffsFromUserMasks(masks);
 }

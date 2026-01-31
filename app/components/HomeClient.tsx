@@ -3,6 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { buffPercent } from "../../lib/clientConstants";
 import type { EquipSlot, MePayload, StatusPayload } from "../../lib/types";
@@ -31,6 +32,7 @@ export function HomeClient({
   isGuest,
   tutorialCta,
 }: HomeClientProps) {
+  const router = useRouter();
   // Use hooks for real-time updates, but start with server data
   const {
     status,
@@ -50,7 +52,7 @@ export function HomeClient({
   const currentStatus = status ?? initialStatus;
   const currentMe = me ?? initialMe;
 
-  const secondsFromServer = currentStatus?.time_to_ready ?? 0;
+  const secondsFromServer = currentStatus?.time_to_next_pack ?? currentStatus?.time_to_ready ?? 0;
 
   const {
     opening,
@@ -96,6 +98,10 @@ export function HomeClient({
     clearChangeError();
     await openPackInternal();
   };
+
+  const packsAvailable = currentStatus?.stored_packs ?? (currentStatus?.pack_ready ? 1 : 0);
+  const packCap = currentStatus?.pack_cap ?? 3;
+  const earningPaused = Boolean(currentStatus?.earning_paused);
 
   const equipAndClear = async (
     maskId: string,
@@ -212,6 +218,7 @@ export function HomeClient({
         stage={packOverlayStage}
         results={results}
         revealedCount={revealedCount}
+        packsRemaining={packOverlayStage === "done" ? packsAvailable : 0}
         errorMessage={packError}
         actionErrorMessage={modalActionError}
         onDismissActionError={modalActionError ? dismissModalActionError : undefined}
@@ -220,6 +227,13 @@ export function HomeClient({
         onEquip={equipAndClear}
         equipping={equipping}
         onClose={closePackOverlay}
+        onOpenNextPack={() => {
+          openPack();
+        }}
+        onExitToCollection={() => {
+          closePackOverlay();
+          router.push("/collection");
+        }}
         onAdvance={advanceToNextStage}
         currentToaEquipped={
           equippedToa
@@ -314,55 +328,58 @@ export function HomeClient({
         </div>
       )}
 
-      <section className="card">
-        <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-          Pack cooldown
-        </h2>
-        {currentStatus ? (
-          <TimeToReadyCountdown
-            seconds={secondsFromServer}
-            onReady={refreshStatus}
-          />
-        ) : (
-          <p className="text-slate-500 text-sm mt-3">Loading...</p>
-        )}
-      </section>
+      {!earningPaused && (
+        <section className="card">
+          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+            Next pack
+          </h2>
+          {currentStatus ? (
+            <TimeToReadyCountdown
+              seconds={secondsFromServer}
+              onReady={refreshStatus}
+            />
+          ) : (
+            <p className="text-slate-500 text-sm mt-3">Loading...</p>
+          )}
+        </section>
+      )}
 
       <section className="flex flex-col items-center gap-3">
-        {currentStatus?.pack_ready && (
         <button
           onClick={openPack}
-          disabled={!currentStatus?.pack_ready || opening || packOverlayOpen}
-          className="relative group select-none"
+          disabled={packsAvailable <= 0 || opening || packOverlayOpen}
+          className={"relative group select-none transition-transform duration-500 ease-out " + (packsAvailable > 0 && !opening && !packOverlayOpen
+                  ? " hover:scale-[1.04] group-active:scale-[0.98]"
+                  : " opacity-70")}
           aria-label="Open pack"
         >
-          {opening
-            ? "Opening..."
-            : statusLoading
-              ? "Checking..."
-            : currentStatus?.pack_ready
-              ? (
-                  <div className="relative">
-                    <Image
-                      src="/pack/pack.png"
-                      alt="Pack"
-                      width={160}
-                      height={160}
-                      className="h-auto w-[160px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:scale-[1.04] group-active:scale-[0.98]"
-                      priority
-                    />
+          <div className="relative">
+            <Image
+              src="/pack/pack.png"
+              alt="Pack"
+              width={160}
+              height={160}
+              className="h-auto w-[160px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.35)] rounded-md shadow-2xl"
+              priority
+            />
 
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="rounded-full bg-white/85 backdrop-blur-sm border border-slate-200/70 px-4 py-1.5 shadow-sm">
-                        <div className="text-sm font-semibold text-slate-900 tracking-tight">
-                          Open
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              : "Not ready"}
-        </button>)}
+            {packsAvailable > 0 && (
+              <div
+                className="absolute -top-[10px] -right-[10px] py-1 px-[10px] rounded-full bg-red-500 text-white text-sm font-bold leading-[20px] text-center shadow-sm"
+                aria-label={`${packsAvailable} packs available`}
+              >
+                {packsAvailable}
+              </div>
+            )}
+          </div>
+        </button>
+
+        <div className="text-xs text-slate-500">
+          Packs: <span className="font-semibold text-slate-700">{packsAvailable}</span> / {packCap}
+          {earningPaused && packsAvailable >= packCap ? (
+            <span className="ml-2 text-rose-600 font-semibold">Storage full</span>
+          ) : null}
+        </div>
       </section>
 
       {currentMe && (

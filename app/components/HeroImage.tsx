@@ -64,7 +64,7 @@ export function HeroImage({
           className="absolute inset-0 opacity-0 pointer-events-none"
           draggable={false}
           priority={false}
-          onLoadingComplete={() => setMaskReady(true)}
+          onLoad={() => setMaskReady(true)}
           onError={() => setMaskReady(true)}
         />
         {showBaseHead && (

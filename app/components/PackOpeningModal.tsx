@@ -22,6 +22,7 @@ export function PackOpeningModal(props: {
   stage: PackOverlayStage;
   results: OpenResult | null;
   revealedCount: number;
+  packsRemaining?: number;
   errorMessage?: string | null;
   actionErrorMessage?: string | null;
   onDismissActionError?: () => void;
@@ -35,6 +36,8 @@ export function PackOpeningModal(props: {
   ) => void;
   equipping?: string | null;
   onClose: () => void;
+  onOpenNextPack?: () => void;
+  onExitToCollection?: () => void;
   onAdvance?: () => void;
   currentToaEquipped?: {
     maskId: string;
@@ -53,6 +56,7 @@ export function PackOpeningModal(props: {
     open,
     stage,
     results,
+    packsRemaining,
     errorMessage,
     actionErrorMessage,
     onDismissActionError,
@@ -61,6 +65,7 @@ export function PackOpeningModal(props: {
     onEquip,
     equipping,
     onClose,
+    onOpenNextPack,
     onAdvance,
     currentToaEquipped,
     currentTuragaEquipped,
@@ -72,12 +77,21 @@ export function PackOpeningModal(props: {
     const body = document.body;
     const html = document.documentElement;
 
+    const themeMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]'
+    );
+    const hadThemeMeta = Boolean(themeMeta);
+    const metaEl = themeMeta ?? document.createElement("meta");
+    const prevThemeColor = metaEl.getAttribute("content");
+
     const prevBodyOverflow = body.style.overflow;
     const prevBodyPosition = body.style.position;
     const prevBodyTop = body.style.top;
     const prevBodyWidth = body.style.width;
     const prevBodyPaddingRight = body.style.paddingRight;
     const prevHtmlOverflow = html.style.overflow;
+    const prevBodyBackgroundColor = body.style.backgroundColor;
+    const prevHtmlBackgroundColor = html.style.backgroundColor;
 
     const scrollY = window.scrollY;
     const scrollbarWidth = window.innerWidth - html.clientWidth;
@@ -88,6 +102,18 @@ export function PackOpeningModal(props: {
     body.style.position = "fixed";
     body.style.top = `-${scrollY}px`;
     body.style.width = "100%";
+
+    // iOS (especially standalone/black-translucent) can show the underlying page
+    // behind the dynamic island/status bar. Force the root background + theme-color
+    // to a dark value while the modal is open.
+    html.style.backgroundColor = "#000";
+    body.style.backgroundColor = "#000";
+    if (!hadThemeMeta) {
+      metaEl.setAttribute("name", "theme-color");
+      document.head.appendChild(metaEl);
+    }
+    metaEl.setAttribute("content", "#000000");
+
     if (scrollbarWidth > 0) {
       body.style.paddingRight = `${scrollbarWidth}px`;
     }
@@ -99,6 +125,16 @@ export function PackOpeningModal(props: {
       body.style.top = prevBodyTop;
       body.style.width = prevBodyWidth;
       body.style.paddingRight = prevBodyPaddingRight;
+      body.style.backgroundColor = prevBodyBackgroundColor;
+      html.style.backgroundColor = prevHtmlBackgroundColor;
+
+      if (hadThemeMeta) {
+        if (prevThemeColor == null) metaEl.removeAttribute("content");
+        else metaEl.setAttribute("content", prevThemeColor);
+      } else {
+        metaEl.remove();
+      }
+
       window.scrollTo(0, scrollY);
     };
   }, [open]);
@@ -114,6 +150,12 @@ export function PackOpeningModal(props: {
       if (stage === "revealing_first" || stage === "revealing_second") {
         onAdvance?.();
       }
+
+      // If there is another pack to open, do that
+      else if (stage === "done" && (packsRemaining ?? 0) > 0) {
+        onOpenNextPack?.();
+      }
+
       // If we're done or in error state, close
       else if (stage === "done" || stage === "error") {
         onClose();
@@ -122,7 +164,7 @@ export function PackOpeningModal(props: {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, stage, onAdvance, onClose]);
+  }, [open, stage, packsRemaining, onOpenNextPack, onAdvance, onClose]);
 
   if (!open) return null;
 
@@ -168,13 +210,25 @@ export function PackOpeningModal(props: {
             <div>
               <div className="text-xs text-slate-500 uppercase tracking-wide"></div>
             </div>
-            <button
-              className="button-secondary text-xs"
-              onClick={onClose}
-              disabled={!canClose}
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-2">
+              {stage === "done" && (packsRemaining ?? 0) > 0 && (
+                <>
+                  <button
+                    className="button-primary text-xs"
+                    onClick={() => onOpenNextPack?.()}
+                  >
+                    Open next ({packsRemaining})
+                  </button>
+                </>
+              )}
+              <button
+                className="button-secondary text-xs"
+                onClick={onClose}
+                disabled={!canClose}
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
 
@@ -193,6 +247,7 @@ export function PackOpeningModal(props: {
                       width={140}
                       height={140}
                       priority
+                      className="rounded-t-md drop-shadow-[0_0_18px_rgba(255,255,255,0.35)]"
                     />
                   </div>
                   <div
@@ -205,6 +260,7 @@ export function PackOpeningModal(props: {
                       width={140}
                       height={140}
                       priority
+                      className="rounded-b-md drop-shadow-[0_0_18px_rgba(255,255,255,0.35)]"
                     />
                   </div>
                 </div>
@@ -223,6 +279,7 @@ export function PackOpeningModal(props: {
                     width={140}
                     height={140}
                     priority
+                    className="rounded-md drop-shadow-[0_0_18px_rgba(255,255,255,0.35)]"
                   />
                 </div>
               )}

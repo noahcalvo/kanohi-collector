@@ -27,5 +27,8 @@ const PACK_UNIT_SECONDS_ENV = process.env.PACK_UNIT_SECONDS ?? process.env.NEXT_
 const parsedPackUnitSeconds = PACK_UNIT_SECONDS_ENV ? Number(PACK_UNIT_SECONDS_ENV) : PACK_UNIT_SECONDS_DEFAULT;
 export const PACK_UNIT_SECONDS = Number.isFinite(parsedPackUnitSeconds) ? parsedPackUnitSeconds : PACK_UNIT_SECONDS_DEFAULT;
 export const PACK_UNITS_PER_PACK = 5;
+// Pack stacking: maximum number of full packs a player can store without opening.
+// Additional storage comes from PACK_STACKING buffs.
+export const BASE_PACK_STORAGE_CAP = 3;
 export const MAX_FRIEND_BUFF_SOURCES = 5;
 export const FRIEND_BUFF_PER_FRIEND = 0.0025; // 0.25%
