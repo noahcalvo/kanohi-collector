@@ -110,21 +110,25 @@ export function GenerationSection({
                     No {rarity.toLowerCase()} masks unlocked yet
                   </p>
                 ) : masks ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="-mx-4 px-4 flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:mx-0 md:px-0 md:pb-0 md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
                     {masks.map((m) => (
-                      <CollectionMaskCard
+                      <div
                         key={m.mask_id}
-                        mask={{
-                          ...m,
-                          name: maskNameById.get(m.mask_id) ?? m.name,
-                        }}
-                        selectedColor={maskColors[m.mask_id]}
-                        onEquip={onEquip}
-                        equipping={equipping}
-                        onChangeColor={onChangeColor}
-                        currentToaEquipped={currentToaEquipped}
-                        currentTuragaEquipped={currentTuragaEquipped}
-                      />
+                        className="snap-start flex-none w-[260px] md:w-auto"
+                      >
+                        <CollectionMaskCard
+                          mask={{
+                            ...m,
+                            name: maskNameById.get(m.mask_id) ?? m.name,
+                          }}
+                          selectedColor={maskColors[m.mask_id]}
+                          onEquip={onEquip}
+                          equipping={equipping}
+                          onChangeColor={onChangeColor}
+                          currentToaEquipped={currentToaEquipped}
+                          currentTuragaEquipped={currentTuragaEquipped}
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : null}
