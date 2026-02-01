@@ -34,7 +34,7 @@ export default function RootLayout({
   const content = (
     <html
       lang="en"
-      className={`${voyanui.variable} bg-gradient-to-br from-orange-500 via-sky-500 to-slate-100 bg-fixed`}
+      className={`${voyanui.variable} bg-gradient-to-br from-slate-50 via-sky-50 to-slate-100 bg-fixed`}
     >
       <body className="antialiased bg-transparent text-slate-900 min-h-screen flex flex-col font-sans relative isolate">
         <div
