@@ -1,7 +1,7 @@
 "use client";
 
 import { Crown } from "lucide-react";
-import { LEVEL_BASE, MAX_LEVEL_BY_RARITY } from "../../../../lib/constants";
+import { LEVEL_BASE } from "../../../../lib/constants";
 import { CollectionMask } from "../../../../lib/types";
 import { ColoredMask } from "../../../components/ColoredMask";
 
