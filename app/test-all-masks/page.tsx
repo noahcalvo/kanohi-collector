@@ -24,7 +24,19 @@ export default function TestAllMasksPage() {
       const genNum = Number(genKey);
       result[genNum] = {} as Record<Rarity, string[]>;
       rarities.forEach((rarity) => {
-        result[genNum][rarity] = getAvailableColors(rarity, genNum);
+        if (rarity === "MYTHIC") {
+          const mythicColors = Array.from(
+            new Set(
+              (masksByGeneration[genNum] ?? [])
+                .filter((m) => m.base_rarity === "MYTHIC")
+                .map((m) => m.original_color)
+                .filter(Boolean),
+            ),
+          );
+          result[genNum][rarity] = mythicColors;
+        } else {
+          result[genNum][rarity] = getAvailableColors(rarity, genNum);
+        }
       });
     });
     return result;

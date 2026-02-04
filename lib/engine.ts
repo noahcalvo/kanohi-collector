@@ -160,16 +160,8 @@ const COLOR_PALETTES_BY_SET_AND_RARITY: Record<
       "light gray",
       "dark gray",
     ],
-    RARE: [
-      "standard",
-      "red",
-      "blue",
-      "green",
-      "brown",
-      "white",
-      "black",
-    ],
-    MYTHIC: ["standard"],
+    RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+    MYTHIC: [],
   },
 };
 
@@ -183,16 +175,8 @@ const DEFAULT_COLORS_BY_RARITY: Record<Rarity, string[]> = {
     "light gray",
     "dark gray",
   ],
-  RARE: [
-    "standard",
-    "red",
-    "blue",
-    "green",
-    "brown",
-    "white",
-    "black",
-  ],
-  MYTHIC: ["standard"],
+  RARE: ["standard", "red", "blue", "green", "brown", "white", "black"],
+  MYTHIC: [],
 };
 
 export async function openTutorialCommonsOnlyPack(
@@ -328,8 +312,15 @@ export async function openTutorialCommonsOnlyPack(
 }
 
 // available colors depend on rarity and set id
-export function getAvailableColors(rarity: Rarity, setId: number): string[] {
-  if (rarity === "MYTHIC") return ["standard"];
+export function getAvailableColors(
+  rarity: Rarity,
+  setId: number,
+  originalColor?: string,
+): string[] {
+  // MYTHIC masks are single-color only: their original color.
+  if (rarity === "MYTHIC") {
+    return originalColor ? [originalColor] : [];
+  }
 
   const setPalette = COLOR_PALETTES_BY_SET_AND_RARITY[setId]?.[rarity];
 
@@ -343,10 +334,20 @@ function sampleColor(
   rand: () => number,
   colorVariantBonus = 0,
 ): string {
+  if (def.base_rarity === "MYTHIC") {
+    if (!def.original_color) {
+      throw new Error(
+        `Invariant: MYTHIC mask missing original_color (mask_id=${def.mask_id})`,
+      );
+    }
+    return def.original_color;
+  }
+
   // Get available colors based on rarity
   const allNonStandardColors = getAvailableColors(
     def.base_rarity,
     def.generation,
+    def.original_color,
   ).filter((c) => c !== "standard");
   const remainingColors = allNonStandardColors.filter(
     (c) => !unlockedColors.includes(c),
@@ -561,7 +562,12 @@ export async function openPackForUser(
     const color =
       mask.base_rarity === "MYTHIC"
         ? mask.original_color
-        : sampleColor(mask, userMask.unlocked_colors, rand, buffs.color_variants);
+        : sampleColor(
+            mask,
+            userMask.unlocked_colors,
+            rand,
+            buffs.color_variants,
+          );
     const isNew = userMask.owned_count === 0;
     const rarityKey = mask.base_rarity;
 
@@ -579,6 +585,17 @@ export async function openPackForUser(
       color !== "standard" && !userMask.unlocked_colors.includes(color);
     if (wasColorNew) {
       userMask.unlocked_colors = addColor(userMask.unlocked_colors, color);
+    }
+
+    // Enforce single-color-only invariant for MYTHIC masks.
+    if (mask.base_rarity === "MYTHIC") {
+      if (!mask.original_color) {
+        throw new Error(
+          `Invariant: MYTHIC mask missing original_color (mask_id=${mask.mask_id})`,
+        );
+      }
+      userMask.unlocked_colors = [mask.original_color];
+      userMask.equipped_color = mask.original_color;
     }
 
     userMask.last_acquired_at = new Date();
@@ -773,33 +790,50 @@ export async function mePayload(
     buffs,
   });
   const userMasks = await store.getUserMasks(user.id);
-  const equipped = userMasks.filter((m) => m.equipped_slot !== "NONE");
+
+  // Ensure MYTHIC masks are never exposed in a colorless/"standard" state.
+  const defById = new Map(db.masks.map((m) => [m.mask_id, m] as const));
+  const normalizedUserMasks = userMasks.map((um) => {
+    const def = defById.get(um.mask_id);
+    if (def?.base_rarity !== "MYTHIC") return um;
+    return {
+      ...um,
+      unlocked_colors: def.original_color ? [def.original_color] : [],
+      equipped_color: def.original_color ?? um.equipped_color,
+    };
+  });
+
+  const equipped = normalizedUserMasks.filter(
+    (m) => m.equipped_slot !== "NONE",
+  );
   const unlockedColors: Record<string, string[]> = {};
-  userMasks.forEach((m) => {
+  normalizedUserMasks.forEach((m) => {
     unlockedColors[m.mask_id] = m.unlocked_colors;
   });
 
-  const collection: CollectionMask[] = userMasks.map((um) => {
-    const def = db.masks.find((m) => m.mask_id === um.mask_id);
-    return {
-      mask_id: um.mask_id,
-      name: def?.name ?? um.mask_id,
-      generation: def?.generation ?? 1,
-      rarity: def?.base_rarity ?? "COMMON",
-      level: um.level,
-      essence: um.essence,
-      owned_count: um.owned_count,
-      equipped_slot: um.equipped_slot,
-      unlocked_colors: um.unlocked_colors,
-      equipped_color: um.equipped_color,
-      transparent: def?.transparent,
-      buff_type: def?.buff_type ?? "VISUAL",
-      buff_base_value: def?.buff_base_value ?? 0,
-      description: def?.description ?? "",
-      origin: def?.origin ?? "",
-      offsetY: def?.maskOffsetY ?? 0,
-    };
-  }).sort((a, b) => a.mask_id.localeCompare(b.mask_id));
+  const collection: CollectionMask[] = normalizedUserMasks
+    .map((um) => {
+      const def = defById.get(um.mask_id);
+      return {
+        mask_id: um.mask_id,
+        name: def?.name ?? um.mask_id,
+        generation: def?.generation ?? 1,
+        rarity: def?.base_rarity ?? "COMMON",
+        level: um.level,
+        essence: um.essence,
+        owned_count: um.owned_count,
+        equipped_slot: um.equipped_slot,
+        unlocked_colors: um.unlocked_colors,
+        equipped_color: um.equipped_color,
+        transparent: def?.transparent,
+        buff_type: def?.buff_type ?? "VISUAL",
+        buff_base_value: def?.buff_base_value ?? 0,
+        description: def?.description ?? "",
+        origin: def?.origin ?? "",
+        offsetY: def?.maskOffsetY ?? 0,
+      };
+    })
+    .sort((a, b) => a.mask_id.localeCompare(b.mask_id));
 
   return {
     user,
@@ -809,14 +843,18 @@ export async function mePayload(
     fractional_units: status.fractional_units,
     unlocked_colors: unlockedColors,
     collection,
-    color_availability: calculateColorAvailability(userMasks),
+    color_availability: calculateColorAvailability(normalizedUserMasks),
   };
 }
 
 const MASK_IDS_BY_COLOR: ReadonlyMap<string, readonly string[]> = (() => {
   const out = new Map<string, string[]>();
   for (const mask of db.masks) {
-    const colors = getAvailableColors(mask.base_rarity, mask.generation);
+    const colors = getAvailableColors(
+      mask.base_rarity,
+      mask.generation,
+      mask.original_color,
+    );
     for (const color of colors) {
       const existing = out.get(color);
       if (existing) existing.push(mask.mask_id);
@@ -855,6 +893,23 @@ export async function equipMask(
   const user = await store.getOrCreateUser(guest, userId);
   const target = await store.getUserMask(user.id, maskId);
   if (!target) throw new Error("User does not own mask");
+
+  const maskDef = db.masks.find((m) => m.mask_id === maskId);
+  if (!maskDef) throw new Error("Mask definition not found");
+
+  // Legendary (MYTHIC) masks must not be equipped in a colorless state.
+  if (maskDef.base_rarity === "MYTHIC" && slot !== "NONE") {
+    if (!maskDef.original_color) {
+      throw new Error(
+        `Invariant: MYTHIC mask missing original_color (mask_id=${maskId})`,
+      );
+    }
+    if (target.equipped_color !== maskDef.original_color) {
+      throw new Error(
+        "Legendary masks must be equipped in their original color.",
+      );
+    }
+  }
 
   // If this equip action could reduce pack storage, enforce confirmation and
   // keep pack progress consistent with the new cap.
@@ -997,8 +1052,22 @@ export async function setMaskColor(
   if (!maskDef) throw new Error("Mask definition not found");
 
   // Mythic masks can only use their original color
-  if (maskDef.base_rarity === "MYTHIC" && color !== maskDef.original_color) {
-    throw new Error("Mythic masks can only be their original color");
+  if (maskDef.base_rarity === "MYTHIC") {
+    if (color !== maskDef.original_color) {
+      throw new Error("Mythic masks can only be their original color");
+    }
+
+    target.unlocked_colors = [maskDef.original_color];
+    target.equipped_color = maskDef.original_color;
+    await store.upsertUserMask(target);
+    await store.appendEvent({
+      event_id: randomUUID(),
+      user_id: user.id,
+      type: "color_change",
+      payload: { mask_id: maskId, color: target.equipped_color },
+      timestamp: new Date(),
+    });
+    return target;
   }
 
   // Verify the color is unlocked

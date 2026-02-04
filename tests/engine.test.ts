@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { BASE_PACK_STORAGE_CAP, PACK_UNIT_SECONDS, PACK_UNITS_PER_PACK } from "../lib/constants";
-import { openPack, equipMask, packStatus } from "../lib/engine";
+import { openPack, equipMask, mePayload, packStatus } from "../lib/engine";
 import { createMemoryStore } from "../lib/store/memoryStore";
 import { computeBuffs } from "../lib/buffs";
 import type { GameStore } from "../lib/store/gameStore";
@@ -82,6 +82,31 @@ describe("engine", () => {
       await store.upsertUserPackProgress(progress);
       await expect(openPack(true, USER_ID, PACK_ID, { seed: `seed-${i}` }, store)).resolves.toBeTruthy();
     }
+  });
+
+  it("prevents equipping a colorless MYTHIC and normalizes MYTHIC color in /me", async () => {
+    // mask_id "13" is the (only) MYTHIC in seed data with original_color "gold".
+    await store.upsertUserMask({
+      id: "temp-mythic-colorless",
+      user_id: USER_ID,
+      mask_id: "13",
+      owned_count: 1,
+      essence: 0,
+      level: 1,
+      equipped_slot: "NONE",
+      equipped_color: "standard",
+      unlocked_colors: [],
+      last_acquired_at: new Date(),
+    });
+
+    await expect(equipMask(true, USER_ID, "13", "TOA", store)).rejects.toThrow(
+      /original color/i,
+    );
+
+    const me = await mePayload(true, USER_ID, store);
+    const mythic = me.collection.find((m) => m.mask_id === "13");
+    expect(mythic?.equipped_color).toBe("gold");
+    expect(mythic?.unlocked_colors).toEqual(["gold"]);
   });
 
   it("computes buff values with TOA slot multiplier (100%)", async () => {
