@@ -40,7 +40,7 @@ function InlineColorRow({
           onPointerDown={(e) => {
             // Prevent focus (which can trigger group-focus-within popovers),
             // but allow the event to bubble so ArtCard can suppress hover popovers.
-            e.preventDefault();
+            if (e.pointerType !== "touch") e.preventDefault();
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -125,7 +125,7 @@ function ColorSelector({
           onPointerDown={(e) => {
             // Prevent focus (which can trigger group-focus-within popovers),
             // but allow the event to bubble so ArtCard can suppress hover popovers.
-            e.preventDefault();
+            if (e.pointerType !== "touch") e.preventDefault();
           }}
           onClick={(e) => {
             e.stopPropagation();

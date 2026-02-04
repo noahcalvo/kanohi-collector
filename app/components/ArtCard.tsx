@@ -149,7 +149,7 @@ export function ArtCard({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
-        style={touchMode ? { touchAction: "pan-y" } : undefined}
+        style={touchMode ? { touchAction: "pan-x pan-y" } : undefined}
         className={
           "group relative h-full z-0 hover:z-50 rounded-3xl p-5 bg-white/60 shadow-sm transition-all duration-300 ease-out hover:shadow-md hover:-translate-y-0.5" +
           (touchMode
