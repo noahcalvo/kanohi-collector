@@ -389,6 +389,7 @@ export function CollectionMaskCard({
             onClose={() => setShowEquipPopup(false)}
             currentToaEquipped={currentToaEquipped}
             currentTuragaEquipped={currentTuragaEquipped}
+            above={true}
           />
         )}
       </div>

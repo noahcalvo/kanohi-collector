@@ -212,7 +212,7 @@ export function HomeClient({
   );
 
   return (
-    <div className="overflow-hidden">
+    <div className="">
       <PackOpeningModal
         open={packOverlayOpen}
         stage={packOverlayStage}
@@ -221,7 +221,9 @@ export function HomeClient({
         packsRemaining={packOverlayStage === "done" ? packsAvailable : 0}
         errorMessage={packError}
         actionErrorMessage={modalActionError}
-        onDismissActionError={modalActionError ? dismissModalActionError : undefined}
+        onDismissActionError={
+          modalActionError ? dismissModalActionError : undefined
+        }
         onRetry={openPack}
         retrying={opening}
         onEquip={equipAndClear}
@@ -261,177 +263,195 @@ export function HomeClient({
       />
 
       <div className="space-y-6">
-      {combinedError && (
-        <InlineNotice
-          tone="error"
-          message={combinedError}
-          actionLabel="Dismiss"
-          onAction={() => {
-            clearPackError();
-            clearEquipError();
-            clearChangeError();
-          }}
-        />
-      )}
+        {combinedError && (
+          <InlineNotice
+            tone="error"
+            message={combinedError}
+            actionLabel="Dismiss"
+            onAction={() => {
+              clearPackError();
+              clearEquipError();
+              clearChangeError();
+            }}
+          />
+        )}
 
-      {statusError && (
-        <InlineNotice
-          tone="error"
-          message={statusError}
-          actionLabel={statusLoading ? "Retrying…" : "Retry"}
-          actionDisabled={statusLoading}
-          onAction={() => {
-            clearStatusError();
-            refreshStatus();
-          }}
-        />
-      )}
+        {statusError && (
+          <InlineNotice
+            tone="error"
+            message={statusError}
+            actionLabel={statusLoading ? "Retrying…" : "Retry"}
+            actionDisabled={statusLoading}
+            onAction={() => {
+              clearStatusError();
+              refreshStatus();
+            }}
+          />
+        )}
 
-      {meError && (
-        <InlineNotice
-          tone="error"
-          message={meError}
-          actionLabel={meLoading ? "Retrying…" : "Retry"}
-          actionDisabled={meLoading}
-          onAction={() => {
-            clearMeError();
-            refreshMe();
-          }}
-        />
-      )}
+        {meError && (
+          <InlineNotice
+            tone="error"
+            message={meError}
+            actionLabel={meLoading ? "Retrying…" : "Retry"}
+            actionDisabled={meLoading}
+            onAction={() => {
+              clearMeError();
+              refreshMe();
+            }}
+          />
+        )}
 
-      {isGuest && (
-        <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
-          <div className="mb-2 text-xs text-yellow-800 text-pretty">
-            Your progress is saved locally. Create an account to save your
-            collection and play across devices.
+        {isGuest && (
+          <div className="card bg-yellow-50 border-yellow-200 text-yellow-900 flex flex-col items-center">
+            <div className="mb-2 text-xs text-yellow-800 text-pretty">
+              Your progress is saved locally. Create an account to save your
+              collection and play across devices.
+            </div>
+            <Link
+              href="/sign-up"
+              className="text-slate-900 font-semibold underline text-sm"
+            >
+              Create Account
+            </Link>
           </div>
-          <Link href="/sign-up" className="text-slate-900 font-semibold underline text-sm">
-            Create Account
-          </Link>
-        </div>
-      )}
+        )}
 
-      {tutorialCta && (
-        <div className="card bg-sky-50 border-sky-200 text-sky-900 flex flex-col items-center">
-          <div className="font-semibold text-lg mb-1">
-            Introduction
+        {tutorialCta && (
+          <div className="card bg-sky-50 border-sky-200 text-sky-900 flex flex-col items-center">
+            <div className="font-semibold text-lg mb-1">Introduction</div>
+            <div className="mb-2 text-sm text-sky-800 text-pretty">
+              {tutorialCta === "start"
+                ? "Learn how masks work and claim your starter rewards."
+                : "Continue the tutorial and claim your starter rewards."}
+            </div>
+            <Link href="/tutorial" className="button-primary mt-2">
+              {tutorialCta === "start" ? "Start Tutorial" : "Resume Tutorial"}
+            </Link>
           </div>
-          <div className="mb-2 text-sm text-sky-800 text-pretty">
-            {tutorialCta === "start"
-              ? "Learn how masks work and claim your starter rewards."
-              : "Continue the tutorial and claim your starter rewards."}
-          </div>
-          <Link href="/tutorial" className="button-primary mt-2">
-            {tutorialCta === "start" ? "Start Tutorial" : "Resume Tutorial"}
-          </Link>
-        </div>
-      )}
+        )}
 
-      {!earningPaused && (
-        <section className="card">
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-            Next pack
-          </h2>
-          {currentStatus ? (
-            <TimeToReadyCountdown
-              seconds={secondsFromServer}
-              onReady={refreshStatus}
-            />
-          ) : (
-            <p className="text-slate-500 text-sm mt-3">Loading...</p>
-          )}
-        </section>
-      )}
-
-      <section className="flex flex-col items-center gap-3">
-        <button
-          onClick={openPack}
-          disabled={packsAvailable <= 0 || opening || packOverlayOpen}
-          className={"relative group select-none transition-transform duration-500 ease-out " + (packsAvailable > 0 && !opening && !packOverlayOpen
-                  ? " hover:scale-[1.04] group-active:scale-[0.98]"
-                  : " opacity-70")}
-          aria-label="Open pack"
-        >
-          <div className="relative">
-            <Image
-              src="/pack/pack.png"
-              alt="Pack"
-              width={160}
-              height={160}
-              className="h-auto w-[160px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.35)] rounded-md shadow-2xl"
-              priority
-            />
-
-            {packsAvailable > 0 && (
-              <div
-                className="absolute -top-[10px] -right-[10px] py-1 px-[10px] rounded-full bg-red-500 text-white text-sm font-bold leading-[20px] text-center shadow-sm"
-                aria-label={`${packsAvailable} packs available`}
-              >
-                {packsAvailable}
-              </div>
-            )}
-          </div>
-        </button>
-
-        <div className="text-xs text-slate-500">
-          Packs: <span className="font-semibold text-slate-700">{packsAvailable}</span> / {packCap}
-          {earningPaused && packsAvailable >= packCap ? (
-            <span className="ml-2 text-rose-600 font-semibold">Storage full</span>
-          ) : null}
-        </div>
-      </section>
-
-      {currentMe && (
-        <section className="card">
-          <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
-            Equipped
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            {equippedToa ? (
-              <EquippedMaskCard
-                key={equippedToa.mask_id}
-                mask={equippedToa}
-                displayName={
-                  maskNameById.get(equippedToa.mask_id) ?? equippedToa.mask_id
-                }
-                onChangeColor={changeColorAndClear}
-                changing={changing}
-                rarity={maskRarityById.get(equippedToa.mask_id) ?? "COMMON"}
-                transparent={maskTransparentById.get(equippedToa.mask_id)}
-                buffType={maskBuffTypeById.get(equippedToa.mask_id) ?? "VISUAL"}
-                buffBaseValue={maskBuffBaseValueById.get(equippedToa.mask_id) ?? 0}
-                offsetY={maskOffsetYById.get(equippedToa.mask_id) ?? 0}
+        {!earningPaused && (
+          <section className="card">
+            <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+              Next pack
+            </h2>
+            {currentStatus ? (
+              <TimeToReadyCountdown
+                seconds={secondsFromServer}
+                onReady={refreshStatus}
               />
             ) : (
-              <EmptySlotCard slot="TOA" />
+              <p className="text-slate-500 text-sm mt-3">Loading...</p>
             )}
+          </section>
+        )}
 
-            {equippedTuraga ? (
-              <EquippedMaskCard
-                key={equippedTuraga.mask_id}
-                mask={equippedTuraga}
-                displayName={
-                  maskNameById.get(equippedTuraga.mask_id) ??
-                  equippedTuraga.mask_id
-                }
-                onChangeColor={changeColorAndClear}
-                changing={changing}
-                rarity={maskRarityById.get(equippedTuraga.mask_id) ?? "COMMON"}
-                transparent={maskTransparentById.get(equippedTuraga.mask_id)}
-                buffType={
-                  maskBuffTypeById.get(equippedTuraga.mask_id) ?? "VISUAL"
-                }
-                buffBaseValue={maskBuffBaseValueById.get(equippedTuraga.mask_id) ?? 0}
-                offsetY={maskOffsetYById.get(equippedTuraga.mask_id) ?? 0}
+        <section className="flex flex-col items-center gap-3">
+          <button
+            onClick={openPack}
+            disabled={packsAvailable <= 0 || opening || packOverlayOpen}
+            className={
+              "relative group select-none transition-transform duration-500 ease-out " +
+              (packsAvailable > 0 && !opening && !packOverlayOpen
+                ? " hover:scale-[1.04] group-active:scale-[0.98]"
+                : " opacity-70")
+            }
+            aria-label="Open pack"
+          >
+            <div className="relative">
+              <Image
+                src="/pack/pack.png"
+                alt="Pack"
+                width={160}
+                height={160}
+                className="h-auto w-[160px] drop-shadow-[0_18px_28px_rgba(0,0,0,0.35)] rounded-md shadow-2xl"
+                priority
               />
-            ) : (
-              <EmptySlotCard slot="TURAGA" />
-            )}
+
+              {packsAvailable > 0 && (
+                <div
+                  className="absolute -top-[10px] -right-[10px] py-1 px-[10px] rounded-full bg-red-500 text-white text-sm font-bold leading-[20px] text-center shadow-sm"
+                  aria-label={`${packsAvailable} packs available`}
+                >
+                  {packsAvailable}
+                </div>
+              )}
+            </div>
+          </button>
+
+          <div className="text-xs text-slate-500">
+            Packs:{" "}
+            <span className="font-semibold text-slate-700">
+              {packsAvailable}
+            </span>{" "}
+            / {packCap}
+            {earningPaused && packsAvailable >= packCap ? (
+              <span className="ml-2 text-rose-600 font-semibold">
+                Storage full
+              </span>
+            ) : null}
           </div>
         </section>
-      )}
-    </div>
+
+        {currentMe && (
+          <section className="card">
+            <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+              Equipped
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              {equippedToa ? (
+                <EquippedMaskCard
+                  key={equippedToa.mask_id}
+                  mask={equippedToa}
+                  displayName={
+                    maskNameById.get(equippedToa.mask_id) ?? equippedToa.mask_id
+                  }
+                  onChangeColor={changeColorAndClear}
+                  changing={changing}
+                  rarity={maskRarityById.get(equippedToa.mask_id) ?? "COMMON"}
+                  transparent={maskTransparentById.get(equippedToa.mask_id)}
+                  buffType={
+                    maskBuffTypeById.get(equippedToa.mask_id) ?? "VISUAL"
+                  }
+                  buffBaseValue={
+                    maskBuffBaseValueById.get(equippedToa.mask_id) ?? 0
+                  }
+                  offsetY={maskOffsetYById.get(equippedToa.mask_id) ?? 0}
+                />
+              ) : (
+                <EmptySlotCard slot="TOA" />
+              )}
+
+              {equippedTuraga ? (
+                <EquippedMaskCard
+                  key={equippedTuraga.mask_id}
+                  mask={equippedTuraga}
+                  displayName={
+                    maskNameById.get(equippedTuraga.mask_id) ??
+                    equippedTuraga.mask_id
+                  }
+                  onChangeColor={changeColorAndClear}
+                  changing={changing}
+                  rarity={
+                    maskRarityById.get(equippedTuraga.mask_id) ?? "COMMON"
+                  }
+                  transparent={maskTransparentById.get(equippedTuraga.mask_id)}
+                  buffType={
+                    maskBuffTypeById.get(equippedTuraga.mask_id) ?? "VISUAL"
+                  }
+                  buffBaseValue={
+                    maskBuffBaseValueById.get(equippedTuraga.mask_id) ?? 0
+                  }
+                  offsetY={maskOffsetYById.get(equippedTuraga.mask_id) ?? 0}
+                />
+              ) : (
+                <EmptySlotCard slot="TURAGA" />
+              )}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }

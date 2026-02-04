@@ -114,7 +114,7 @@ export function GenerationSection({
                     {masks.map((m) => (
                       <div
                         key={m.mask_id}
-                        className="snap-start flex-none w-[260px] md:w-auto"
+                        className="flex-none w-[260px] md:w-auto"
                       >
                         <CollectionMaskCard
                           mask={{
