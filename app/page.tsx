@@ -27,15 +27,33 @@ async function MainContent() {
 
   // Show a "Resume tutorial" CTA only if a tutorial progress row exists and is unfinished.
   const internalUser = await prismaStore.getOrCreateUser(isGuest, userId);
-  const tutorialProgress = await (prisma as any).tutorialProgress.findUnique({
-    where: {
-      tutorialKey_userId: {
-        tutorialKey: TUTORIAL_KEY,
-        userId: internalUser.id,
-      },
-    },
-    select: { completedAt: true },
-  });
+  type TutorialProgressRow = { completedAt: Date | null } | null;
+  type TutorialProgressDelegate = {
+    findUnique: (args: {
+      where: {
+        tutorialKey_userId: {
+          tutorialKey: string;
+          userId: string;
+        };
+      };
+      select: { completedAt: true };
+    }) => Promise<TutorialProgressRow>;
+  };
+  const tutorialProgressDelegate = (
+    prisma as unknown as { tutorialProgress?: TutorialProgressDelegate }
+  ).tutorialProgress;
+  const tutorialProgress: TutorialProgressRow = tutorialProgressDelegate
+    ? await tutorialProgressDelegate.findUnique({
+        where: {
+          tutorialKey_userId: {
+            tutorialKey: TUTORIAL_KEY,
+            userId: internalUser.id,
+          },
+        },
+        select: { completedAt: true },
+      })
+    : null;
+
   const tutorialCta: "start" | "resume" | null = !tutorialProgress
     ? "start"
     : tutorialProgress.completedAt

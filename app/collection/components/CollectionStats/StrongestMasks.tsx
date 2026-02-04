@@ -1,12 +1,22 @@
 "use client";
 
 import { Crown } from "lucide-react";
-import {
-  DUPLICATE_ESSENCE,
-  MAX_LEVEL_BY_RARITY,
-} from "../../../../lib/constants";
+import { LEVEL_BASE, MAX_LEVEL_BY_RARITY } from "../../../../lib/constants";
 import { CollectionMask } from "../../../../lib/types";
 import { ColoredMask } from "../../../components/ColoredMask";
+
+function rarityToStrengthMultiplier(rarity: string): number {
+  switch (rarity) {
+    case "MYTHIC":
+      return 3;
+    case "RARE":
+      return 2;
+    case "COMMON":
+      return 1;
+    default:
+      return 0;
+  }
+}
 
 export function StrongestMasks({
   collection,
@@ -15,9 +25,8 @@ export function StrongestMasks({
 }) {
   const calculateStrength = (mask: CollectionMask): number => {
     return (
-      (mask.level - 1) * MAX_LEVEL_BY_RARITY[mask.rarity] +
-      (mask.essence || 0) +
-      DUPLICATE_ESSENCE
+      (mask.level * LEVEL_BASE + mask.essence) *
+      rarityToStrengthMultiplier(mask.rarity)
     );
   };
 
