@@ -72,6 +72,13 @@ export function BottomNav() {
     setShowCollectionTip(stored);
   }, [hideNav, npe, pathname, router]);
 
+  const handleNavigation = (href: string) => {
+    // Trigger router refresh to get fresh server data when navigating
+    if (pathname !== href) {
+      router.refresh();
+    }
+  };
+
   if (hideNav) return null;
 
   return (
@@ -98,6 +105,10 @@ export function BottomNav() {
                   : showTipForThisItem ? "bg-white text-slate-900 border border-slate-900 hover:bg-slate-100" : "bg-white/70 text-slate-900 border border-slate-200/70 hover:bg-white/80")
               }
               onClick={() => {
+                // Refresh server data when navigating
+                handleNavigation(item.href);
+                
+                // Handle collection tip dismissal
                 if (!showTipForThisItem) return;
                 setShowCollectionTip(false);
                 try {

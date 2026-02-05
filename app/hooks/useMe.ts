@@ -8,9 +8,11 @@ import { fetchJson } from "../lib/fetchJson";
 export function useMe(options?: {
   initialMe?: MePayload;
   autoFetch?: boolean;
+  refreshOnFocus?: boolean;
 }) {
   const initialMe = options?.initialMe ?? null;
   const autoFetch = options?.autoFetch ?? (initialMe == null);
+  const refreshOnFocus = options?.refreshOnFocus ?? true;
 
   const [me, setMe] = useState<MePayload | null>(initialMe);
   const [loading, setLoading] = useState<boolean>(initialMe == null);
@@ -27,6 +29,7 @@ export function useMe(options?: {
     try {
       const data = await fetchJson<MePayload>("/api/me", {
         signal: controller.signal,
+        cache: "no-store", // Prevent caching stale data
       });
       setMe(data);
     } catch (err) {
@@ -42,6 +45,29 @@ export function useMe(options?: {
     refreshMe();
     return () => abortRef.current?.abort();
   }, [autoFetch, refreshMe]);
+
+  // Refresh when page becomes visible (user returns from another tab/page)
+  useEffect(() => {
+    if (!refreshOnFocus) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshMe();
+      }
+    };
+
+    const handleFocus = () => {
+      refreshMe();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refreshOnFocus, refreshMe]);
 
   const clearError = useCallback(() => setError(null), []);
 
