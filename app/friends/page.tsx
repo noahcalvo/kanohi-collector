@@ -19,7 +19,7 @@ export default function FriendsPage() {
           Coming soon
         </h2>
         <p className="text-slate-600 text-sm mt-3">
-          Friends aren’t implemented in this build yet.
+          Friends aren&apos;t implemented in this build yet.
         </p>
       </section>
     </div>

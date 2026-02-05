@@ -14,10 +14,10 @@
 - Leveling: protodermis from duplicates 100; cost = 500 * current_level; consume essence on level-up; respect `max_level`.
 
 ### API & Behavior Guardrails
-- `GET /api/me` is source of truth (equipped masks, buffs, timers, unlocked colors). Only add caching if it can’t cause stale game state.
+- `GET /api/me` is source of truth (equipped masks, buffs, timers, unlocked colors). Only add caching if it can't cause stale game state.
 - `GET /api/packs/status`: include `pack_ready`, `time_to_ready`, `fractional_units`, `pity_counter`.
 - `POST /api/packs/open`: require auth + idempotency key; lock `user_pack_progress` (`SELECT ... FOR UPDATE`), validate eligibility, run server draw, atomically upsert `user_masks`, update pity/progress, append events, return mask payloads with rarity/color/is_new/essence/levels/unlocked_colors.
-- `POST /api/packs/open` idempotency: persist pack opens as an immutable domain event in Postgres keyed by `(user_id, client_request_id)` and replay from stored pulls on retry (don’t cache JSON blobs).
+- `POST /api/packs/open` idempotency: persist pack opens as an immutable domain event in Postgres keyed by `(user_id, client_request_id)` and replay from stored pulls on retry (don't cache JSON blobs).
 - `POST /api/mask/{mask_id}/equip`: validate ownership and slot; optionally prevent duplicate buff types across slots (MVP allows dup masks, blocks identical buff types if enforced).
 
 ### Clean Code Expectations
