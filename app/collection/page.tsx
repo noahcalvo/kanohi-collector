@@ -3,9 +3,8 @@ import { mePayload } from "../../lib/engine";
 import { masks } from "../../lib/staticData";
 import { CollectionClient } from "./components/CollectionClient";
 
-// Disable caching for dynamic user data - always fetch fresh
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Revalidate every 60 seconds for dynamic data
+export const revalidate = 60;
 
 export default async function CollectionPage() {
   // Fetch data on the server

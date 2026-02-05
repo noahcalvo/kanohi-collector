@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OpenResult } from "../../lib/types";
 import type { PackOverlayStage } from "../components/PackOpeningModal";
@@ -12,6 +13,7 @@ export function usePackOpening(args: {
   refreshMe: () => void;
 }) {
   const { packReady, refreshStatus, refreshMe } = args;
+  const router = useRouter();
 
   const [opening, setOpening] = useState(false);
   const [results, setResults] = useState<OpenResult | null>(null);
@@ -42,7 +44,9 @@ export function usePackOpening(args: {
     setPackOverlayAnimationDone(false);
     // Refresh user data after modal closes to avoid background updates during animation
     refreshMe();
-  }, [packOverlayStage, refreshMe]);
+    // Invalidate Next.js router cache so next navigation gets fresh data
+    router.refresh();
+  }, [packOverlayStage, refreshMe, router]);
 
   const clearPackError = useCallback(() => {
     setPackError(null);
@@ -154,6 +158,8 @@ export function usePackOpening(args: {
       });
       setResults(data);
       refreshStatus();
+      // Invalidate Next.js router cache immediately so navigation shows updated pack count
+      router.refresh();
     } catch (err) {
       setPackError(formatApiErrorMessage(err));
       setPackOverlayStage("error");
@@ -161,7 +167,7 @@ export function usePackOpening(args: {
       setOpening(false);
     }
     // Don't refresh user data yet - wait until modal closes to avoid background updates
-  }, [opening, packReady, refreshStatus]);
+  }, [opening, packReady, refreshStatus, router]);
 
   return {
     opening,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { EquipSlot } from "../../lib/types";
 import { formatApiErrorMessage } from "../lib/errors";
@@ -7,6 +8,7 @@ import { ApiError, fetchJson } from "../lib/fetchJson";
 
 export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
   const { refreshMe } = args;
+  const router = useRouter();
 
   const [equipping, setEquipping] = useState<string | null>(null);
   const [equipError, setEquipError] = useState<string | null>(null);
@@ -71,14 +73,16 @@ export function useEquipMask(args: { refreshMe: () => Promise<void> | void }) {
           }
         }
 
+        // Refresh local state and invalidate Next.js router cache
         await refreshMe();
+        router.refresh(); // Invalidate server component cache for next navigation
       } catch (err) {
         setEquipError(formatApiErrorMessage(err));
       } finally {
         setEquipping(null);
       }
     },
-    [equipLabel, equipping, refreshMe]
+    [equipLabel, equipping, refreshMe, router]
   );
 
   return { equip, equipping, equipError, clearEquipError };

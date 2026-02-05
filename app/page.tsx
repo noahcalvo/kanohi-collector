@@ -8,9 +8,8 @@ import { Header } from "./components/Header";
 import { HomeClient } from "./components/HomeClient";
 import HomeLoading from "./loading";
 
-// Disable caching for dynamic user data - always fetch fresh
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Revalidate every 60 seconds for dynamic data
+export const revalidate = 60;
 
 export default function Home() {
   return (
