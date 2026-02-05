@@ -4,13 +4,13 @@ import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { buffPercent } from "../../lib/clientConstants";
 import type { EquipSlot, MePayload, StatusPayload } from "../../lib/types";
 import { InlineNotice } from "../components/InlineNotice";
 import { EquippedMaskCard } from "../components/MaskCards";
 import { NakedHead } from "../components/NakedHead";
-import { PackOpeningModal } from "../components/PackOpeningModal";
+import { PackOpeningModalLazy } from "../components/PackOpeningModalLazy";
 import { useColorPicker } from "../hooks/useColorPicker";
 import { useEquipMask } from "../hooks/useEquipMask";
 import { useMe } from "../hooks/useMe";
@@ -25,6 +25,42 @@ interface HomeClientProps {
   isGuest?: boolean;
   tutorialCta?: "start" | "resume" | null;
 }
+
+// Memoized empty slot card component for better performance
+const EmptySlotCard = memo(({ slot }: { slot: "TOA" | "TURAGA" }) => (
+  <EquippedCard
+    popover={
+      <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
+        <div className="text-xs text-slate-500 uppercase tracking-wide">
+          {slot} slot
+        </div>
+        <div className="text-sm text-slate-700 mt-2">Nothing equipped.</div>
+        <Link href="/collection" className="text-sm text-slate-700 mt-2">
+          Equip a mask from Collection
+          <ArrowRight size={16} className="inline-block ml-1 mb-[3px]" />
+        </Link>
+      </div>
+    }
+  >
+    <div className="text-[11px] text-slate-500 uppercase tracking-wide">
+      {slot} <span className="lowercase">{buffPercent(slot)}</span>
+    </div>
+    <div
+      className="mt-4 flex items-center justify-center"
+      style={{
+        filter:
+          "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.23))",
+      }}
+    >
+      <NakedHead size="md" eyeColor="#FF0000" />
+    </div>
+    <div className="mt-3 px-2">
+      <div className="h-[28px]"></div>
+    </div>
+  </EquippedCard>
+));
+
+EmptySlotCard.displayName = "EmptySlotCard";
 
 export function HomeClient({
   initialStatus,
@@ -91,19 +127,19 @@ export function HomeClient({
     clearChangeError();
   };
 
-  const openPack = async () => {
+  const openPack = useCallback(async () => {
     // Preserve prior behavior: opening a pack clears any existing error.
     clearPackError();
     clearEquipError();
     clearChangeError();
     await openPackInternal();
-  };
+  }, [clearPackError, clearEquipError, clearChangeError, openPackInternal]);
 
   const packsAvailable = currentStatus?.stored_packs ?? (currentStatus?.pack_ready ? 1 : 0);
   const packCap = currentStatus?.pack_cap ?? 3;
   const earningPaused = Boolean(currentStatus?.earning_paused);
 
-  const equipAndClear = async (
+  const equipAndClear = useCallback(async (
     maskId: string,
     slot: EquipSlot,
     color?: string,
@@ -111,12 +147,12 @@ export function HomeClient({
   ) => {
     clearEquipError();
     await equip(maskId, slot, color, transparent);
-  };
+  }, [clearEquipError, equip]);
 
-  const changeColorAndClear = async (maskId: string, color: string) => {
+  const changeColorAndClear = useCallback(async (maskId: string, color: string) => {
     clearChangeError();
     await changeColor(maskId, color);
-  };
+  }, [clearChangeError, changeColor]);
 
   const maskNameById = useMemo(
     () =>
@@ -178,42 +214,9 @@ export function HomeClient({
   const equippedTuraga =
     currentMe?.equipped.find((m) => m.equipped_slot === "TURAGA") ?? null;
 
-  const EmptySlotCard = ({ slot }: { slot: "TOA" | "TURAGA" }) => (
-    <EquippedCard
-      popover={
-        <div className="bg-white/90 border border-slate-200/70 rounded-2xl p-4 shadow-sm backdrop-blur-sm">
-          <div className="text-xs text-slate-500 uppercase tracking-wide">
-            {slot} slot
-          </div>
-          <div className="text-sm text-slate-700 mt-2">Nothing equipped.</div>
-          <Link href="/collection" className="text-sm text-slate-700 mt-2">
-            Equip a mask from Collection
-            <ArrowRight size={16} className="inline-block ml-1 mb-[3px]" />
-          </Link>
-        </div>
-      }
-    >
-      <div className="text-[11px] text-slate-500 uppercase tracking-wide">
-        {slot} <span className="lowercase">{buffPercent(slot)}</span>
-      </div>
-      <div
-        className="mt-4 flex items-center justify-center"
-        style={{
-          filter:
-            "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.23))",
-        }}
-      >
-        <NakedHead size="md" eyeColor="#FF0000" />
-      </div>
-      <div className="mt-3 px-2">
-        <div className="h-[28px]"></div>
-      </div>
-    </EquippedCard>
-  );
-
   return (
     <div className="">
-      <PackOpeningModal
+      <PackOpeningModalLazy
         open={packOverlayOpen}
         stage={packOverlayStage}
         results={results}

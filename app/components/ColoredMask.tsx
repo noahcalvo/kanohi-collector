@@ -1,5 +1,5 @@
 import Image from "next/image";
-import React from "react";
+import React, { memo } from "react";
 import { colorToHex } from "../../lib/colors";
 
 interface ColoredMaskProps {
@@ -10,6 +10,7 @@ interface ColoredMaskProps {
   transparent?: boolean;
   withShading?: boolean;
   style?: React.CSSProperties;
+  priority?: boolean;
 }
 
 // Color utilities centralized in lib/colors
@@ -18,8 +19,9 @@ interface ColoredMaskProps {
  * Renders a mask image with runtime color recoloring using multiply blend mode + CSS mask.
  * For opaque masks (100% opacity), uses CSS mask technique.
  * For transparent masks (80% opacity), overlays the colored image directly.
+ * Memoized for better performance when re-rendering with same props.
  */
-export function ColoredMask({
+export const ColoredMask = memo(function ColoredMask({
   maskId,
   color = "standard", // Default grey
   className = "",
@@ -27,6 +29,7 @@ export function ColoredMask({
   transparent = false,
   withShading = false,
   style = {},
+  priority = false,
 }: ColoredMaskProps) {
   const imagePath = `/masks/${maskId}.png`;
   const hexColor = colorToHex(color);
@@ -58,7 +61,10 @@ export function ColoredMask({
         src={imagePath}
         alt={alt}
         fill
+        sizes="(max-width: 768px) 128px, 256px"
         className="absolute inset-0 w-full h-full object-contain"
+        priority={priority}
+        loading={priority ? undefined : "lazy"}
       />
 
       {/* Color multiply layer */}
@@ -97,4 +103,4 @@ export function ColoredMask({
       )}
     </div>
   );
-}
+});

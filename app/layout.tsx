@@ -9,6 +9,9 @@ import { BottomNav } from "./components/BottomNav";
 const voyanui = localFont({
   src: "../public/fonts/voya-nui.ttf",
   variable: "--font-voya-nui",
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "sans-serif"],
 });
 
 export const metadata: Metadata = {

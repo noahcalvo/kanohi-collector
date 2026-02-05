@@ -8,6 +8,9 @@ import { Header } from "./components/Header";
 import { HomeClient } from "./components/HomeClient";
 import HomeLoading from "./loading";
 
+// Revalidate every 60 seconds for dynamic data
+export const revalidate = 60;
+
 export default function Home() {
   return (
     <div className="space-y-6">
@@ -25,8 +28,14 @@ async function MainContent() {
     throw new Error("No userId found in MainContent");
   }
 
+  // Parallelize independent data fetching for better performance
+  const [internalUser, initialStatus, initialMe] = await Promise.all([
+    prismaStore.getOrCreateUser(isGuest, userId),
+    packStatus(isGuest, userId, "free_daily_v1"),
+    mePayload(isGuest, userId),
+  ]);
+
   // Show a "Resume tutorial" CTA only if a tutorial progress row exists and is unfinished.
-  const internalUser = await prismaStore.getOrCreateUser(isGuest, userId);
   type TutorialProgressRow = { completedAt: Date | null } | null;
   type TutorialProgressDelegate = {
     findUnique: (args: {
@@ -60,8 +69,6 @@ async function MainContent() {
       ? null
       : "resume";
 
-  const initialStatus = await packStatus(isGuest, userId, "free_daily_v1");
-  const initialMe = await mePayload(isGuest, userId);
   return (
     <HomeClient
       initialStatus={initialStatus}
