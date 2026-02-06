@@ -158,8 +158,8 @@ export function usePackOpening(args: {
       });
       setResults(data);
       refreshStatus();
-      // Invalidate Next.js router cache immediately so navigation shows updated pack count
-      router.refresh();
+      // Don't call router.refresh() here - it can cause the page to remount in stale PWA sessions,
+      // which resets the modal state and closes it prematurely. We call it in closePackOverlay instead.
     } catch (err) {
       setPackError(formatApiErrorMessage(err));
       setPackOverlayStage("error");
@@ -167,7 +167,7 @@ export function usePackOpening(args: {
       setOpening(false);
     }
     // Don't refresh user data yet - wait until modal closes to avoid background updates
-  }, [opening, packReady, refreshStatus, router]);
+  }, [opening, packReady, refreshStatus]);
 
   return {
     opening,
