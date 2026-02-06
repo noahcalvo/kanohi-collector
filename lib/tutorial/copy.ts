@@ -4,7 +4,13 @@ export type TutorialCopyBlock = {
   heading: string;
   subheading?: string;
   finalCta?: string;
-  slides?: Array<{ quote: string; source: string, body?: string }>;
+  slides?: Array<{
+    quote: string;
+    source: string;
+    body?: string;
+    imagesrc?: string;
+    imageDescription?: string;
+  }>;
 };
 
 export const TUTORIAL_COPY: Record<
@@ -20,19 +26,21 @@ export const TUTORIAL_COPY: Record<
     finalCta: "Click to learn about the powers of the Kanohi",
     slides: [
       {
-        quote: "In the time before time, the Great Spirit descended from the heavens.",
+        quote:
+          "In the time before time, the Great Spirit descended from the heavens.",
         source: "Bionicle: Mask of Light",
-        body: "BIONICLE launched in 2001, saving the LEGO Group from financial ruin.", 
+        body: "BIONICLE launched in 2001, saving the LEGO Group from financial ruin.",
       },
       {
-        quote: "May the heart of Metru Nui live forever, for this is the island of Mata Nui, named in honor of the Great Spirit.",
+        quote:
+          "May the heart of Metru Nui live forever, for this is the island of Mata Nui, named in honor of the Great Spirit.",
         source: "Turaga Vakama, BIONICLE 2: Legends of Metru Nui",
-        body: "The story told of an island, with dense jungles, vast deserts, towering mountains and scattered villages.",
+        body: "The story told of an island paradise.",
       },
       {
-        quote: "Six heroes must rise to face the darkness. They are the Toa.",
-        source: "LEGO.com promotional copy (2001)",
-        body: "Elemental warriors called Toa washed onto the shore, sent to protect the island.<br>Their instincts drove them to seek powerful masks called Kanohi.",
+        quote: "I am Wenua, Turaga of this village. Welcome, Toa Onua.",
+        source: "Turaga Wenua, BIONICLE Chronicles #1: Tale of the Toa",
+        body: "Elemental warriors called Toa washed onto the shore, sent to protect the island from evil.<br>Turaga, the elders of the island clans knew destiny of their arrival.",
       },
     ],
   },
@@ -43,12 +51,23 @@ export const TUTORIAL_COPY: Record<
     finalCta: "Continue to learn how masks work in this game",
     slides: [
       {
-        quote: "Each of us will tell a tale of the Toa's search for the Kanohi Nuva. At the end of our storytelling, we will make our decision.",
+        quote:
+          "Each of us will tell a tale of the Toa's search for the Kanohi Nuva.",
         source: "Turaga Vakama, BIONICLE Chronicles #4: Tales of the Masks",
-        body: "Each Kanohi is an artifact, defined by the quest required to obtain it. It holds a purpose, identity, and path through the dark.",
+        body: "Masks known as Kanohi are artifacts, defined by the quests required to obtain them. In Kanohi Collector, your goal is just that: collect kanohi",
+        imagesrc: "masks/1.png",
+        imageDescription:
+          "<h2>Kanohi Hau</h2><p>The Great Mask of Shielding, when equipped allows for larger storage of unopened mask packs</p>",
       },
       {
-        quote: "Ah, the Mask of Time. You are a great mask-maker. You could have many destinies.",
+        quote: "A Turaga carries wisdom, not strength.",
+        source: "BIONICLE 4: Tales of the Masks",
+        body: "<p style='margin-bottom: 8px;'>You have two slots to equip masks from your collection</p><div syle='display:flex'><div><b>Toa</b><p>Grants 100% of the mask's buff</p></div><div><b>Turaga</b><p>Grants only half of the masks original buff</p></div>",
+      },
+
+      {
+        quote:
+          "Ah, the Mask of Time. You are a great mask-maker. You could have many destinies.",
         source: "Makuta, BIONICLE 2: Legends of Metru Nui",
         body: "Some masks were crafted by matoran, while others were found hidden on the island.<br>The Great Masks were said to be gifts from the Great Spirit himself.",
       },
@@ -71,12 +90,8 @@ export const TUTORIAL_COPY: Record<
         body: "In this game, masks are equipped to shape your pack-opening power. <br>Masks can reduce pack cooldowns, improve rarity odds, and unlock inspection.<br>They can also increase chances of new colors, and even boost your friends’ openings.",
       },
       {
-        quote: "A Turaga carries wisdom, not strength.",
-        source: "BIONICLE 4: Tales of the Masks",
-        body: "<p style='margin-bottom: 8px;'>You may equip a mask in each of two slots: <b>Toa</b> and <b>Turaga</b>.</p>The Toa slot will grant 100% of the mask's buff. The Turaga slot will only grant half of the masks power.",
-      },
-      {
-        quote: "Now it's time for you to make new legends. For that is the way of the Bionicle.",
+        quote:
+          "Now it's time for you to make new legends. For that is the way of the Bionicle.",
         source: "Turaga Vakama, BIONICLE 3: Web of Shadows",
       },
     ],

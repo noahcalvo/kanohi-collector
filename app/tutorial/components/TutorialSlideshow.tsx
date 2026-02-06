@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TutorialCopyBlock } from "@/lib/tutorial/copy";
 
@@ -353,18 +354,29 @@ export function TutorialSlideshow(props: {
                     >
                       <div className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm text-white/90">
                         <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
-                        <div className="font-medium tracking-tight">Continuing…</div>
+                        <div className="font-medium tracking-tight">
+                          Continuing…
+                        </div>
                       </div>
                     </div>
                   ) : null}
                 </motion.div>
               </AnimatePresence>
+              {current.imagesrc && (
+                <div>
+                  <Image
+                    src={current.imagesrc}
+                    alt={current.imageDescription ?? current.imagesrc}
+                  />
+                  {current.imageDescription && (
+                    <div>{current.imageDescription}</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          <div
-            className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70"
-          >
+          <div className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70">
             <div>
               {Array.from({ length: slides.length }).map((_, i) => (
                 <span
@@ -376,7 +388,9 @@ export function TutorialSlideshow(props: {
                 />
               ))}
             </div>
-            <div className={busy || finishingStep ? "opacity-80" : "animate-pulse"}>
+            <div
+              className={busy || finishingStep ? "opacity-80" : "animate-pulse"}
+            >
               {busy || finishingStep ? "Continuing…" : footerCta}
             </div>
           </div>

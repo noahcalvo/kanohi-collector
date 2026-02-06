@@ -78,6 +78,7 @@ export default function TutorialPage() {
       const data = await fetchJson<ProgressResponse>("/api/tutorial/progress");
       setProgress(data);
     } catch (err) {
+      setProgress({ current_step: "INTRO_MASKS_PURPOSE" });
       setError(formatApiErrorMessage(err, "Failed to load tutorial"));
     } finally {
       setLoading(false);

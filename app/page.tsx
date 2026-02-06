@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getUserId } from "../lib/auth";
 import { prisma } from "../lib/db/prisma";
@@ -25,7 +26,7 @@ export default function Home() {
 async function MainContent() {
   const { userId, isGuest } = await getUserId();
   if (!userId) {
-    throw new Error("No userId found in MainContent");
+    redirect("/tutorial");
   }
 
   // Parallelize independent data fetching for better performance
