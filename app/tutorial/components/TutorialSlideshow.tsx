@@ -329,7 +329,7 @@ export function TutorialSlideshow(props: {
                         transition={{ delay: 0.15, duration: 0.8 }}
                         className="tutorial-drift text-lg italic tracking-wide text-slate-100"
                       >
-                        “{current.quote}”
+                        &quot;{current.quote}&quot;
                       </motion.blockquote>
 
                       <figcaption className="text-xs text-slate-300/70">
@@ -345,6 +345,50 @@ export function TutorialSlideshow(props: {
                         />
                       </div>
                     ) : null}
+
+                    {current.imagesrc && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.8 }}
+                        className={`gap-x-2 ${
+                          current.imageFill
+                            ? "flex flex-col"
+                            : "flex flex-row items-start"
+                        }`}
+                      >
+                        {current.imageFill ? (
+                          // FULL-WIDTH IMAGE (fill)
+                          <div className="relative w-full aspect-[3/1]">
+                            <Image
+                              src={current.imagesrc}
+                              alt={current.imageDescription ?? current.imagesrc}
+                              fill
+                              sizes="100vw"
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          // SIDE-BY-SIDE IMAGE (fixed size)
+                          <Image
+                            src={current.imagesrc}
+                            alt={current.imageDescription ?? current.imagesrc}
+                            width={128}
+                            height={128}
+                            sizes="128px"
+                            className="object-contain shrink-0"
+                          />
+                        )}{" "}
+                        {current.imageDescription && (
+                          <div
+                            className="text-white/70 text-sm gap-y-4 flex flex-col max-w-sm text-pretty p-2"
+                            dangerouslySetInnerHTML={{
+                              __html: current.imageDescription,
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )}
                   </div>
 
                   {(busy || finishingStep) && isLast ? (
@@ -362,46 +406,6 @@ export function TutorialSlideshow(props: {
                   ) : null}
                 </motion.div>
               </AnimatePresence>
-              {current.imagesrc && (
-                <div
-                  className={`gap-x-2 p-4 ${
-                    current.imageFill
-                      ? "flex flex-col"
-                      : "flex flex-row items-start"
-                  }`}
-                >
-                  {current.imageFill ? (
-                    // FULL-WIDTH IMAGE (fill)
-                    <div className="relative w-full aspect-[3/1]">
-                      <Image
-                        src={current.imagesrc}
-                        alt={current.imageDescription ?? current.imagesrc}
-                        fill
-                        sizes="100vw"
-                        className="object-contain"
-                      />
-                    </div>
-                  ) : (
-                    // SIDE-BY-SIDE IMAGE (fixed size)
-                    <Image
-                      src={current.imagesrc}
-                      alt={current.imageDescription ?? current.imagesrc}
-                      width={128}
-                      height={128}
-                      sizes="128px"
-                      className="object-contain shrink-0"
-                    />
-                  )}{" "}
-                  {current.imageDescription && (
-                    <div
-                      className="text-white/70 text-sm gap-y-4 flex flex-col max-w-sm text-pretty p-2"
-                      dangerouslySetInnerHTML={{
-                        __html: current.imageDescription,
-                      }}
-                    />
-                  )}
-                </div>
-              )}
             </div>
           </div>
 

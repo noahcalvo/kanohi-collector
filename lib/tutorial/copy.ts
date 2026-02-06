@@ -15,10 +15,7 @@ export type TutorialCopyBlock = {
 };
 
 export const TUTORIAL_COPY: Record<
-  Extract<
-    TutorialStep,
-    "INTRO_BIONICLE" | "INTRO_MASKS_PURPOSE" | "INTRO_GAME_USAGE"
-  >,
+  Extract<TutorialStep, "INTRO_BIONICLE" | "INTRO_MASKS_PURPOSE">,
   TutorialCopyBlock
 > = {
   INTRO_BIONICLE: {
@@ -73,31 +70,6 @@ export const TUTORIAL_COPY: Record<
         imageFill: true,
         imageDescription:
           "There are six colors to collect for most common and rare masks.",
-      },
-
-      {
-        quote:
-          "Ah, the Mask of Time. You are a great mask-maker. You could have many destinies.",
-        source: "Makuta, BIONICLE 2: Legends of Metru Nui",
-        body: "Some masks were crafted by matoran, while others were found hidden on the island.<br>The Great Masks were said to be gifts from the Great Spirit himself.",
-      },
-      {
-        quote: "Each set sold separately.",
-        source: "Bionicle ad (early 2000s)",
-        body: "The six Toa each sought a Great Mask aligned to their elemental power: Fire, Water, Air, Earth, Stone, and Ice.<br>Each of them was capable of wielding any mask, adopting the powers they granted.",
-      },
-    ],
-  },
-
-  INTRO_GAME_USAGE: {
-    heading: "How masks work here",
-    subheading: "Clear rules. Real strategy.",
-    finalCta: "Start your journey into Mata Nui",
-    slides: [
-      {
-        quote: "A Toa’s power comes from their Kanohi.",
-        source: "LEGO promotional lore text",
-        body: "In this game, masks are equipped to shape your pack-opening power. <br>Masks can reduce pack cooldowns, improve rarity odds, and unlock inspection.<br>They can also increase chances of new colors, and even boost your friends’ openings.",
       },
       {
         quote:
