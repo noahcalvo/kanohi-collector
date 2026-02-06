@@ -259,8 +259,7 @@ export default function TutorialPage() {
 
   if (
     effectiveStep === "INTRO_BIONICLE" ||
-    effectiveStep === "INTRO_MASKS_PURPOSE" ||
-    effectiveStep === "INTRO_GAME_USAGE"
+    effectiveStep === "INTRO_MASKS_PURPOSE"
   ) {
     return (
       <main className="fixed inset-0 z-[1000] bg-black text-slate-100">

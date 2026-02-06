@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TutorialCopyBlock } from "@/lib/tutorial/copy";
 
@@ -273,7 +274,7 @@ export function TutorialSlideshow(props: {
           </header>
 
           <div className="min-h-0 flex items-center py-6">
-            <div className="relative min-h-0 w-full">
+            <div className="relative min-h-0 w-full max-h-[calc(100dvh-220px)] overflow-y-scroll">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={safeIndex}
@@ -328,7 +329,7 @@ export function TutorialSlideshow(props: {
                         transition={{ delay: 0.15, duration: 0.8 }}
                         className="tutorial-drift text-lg italic tracking-wide text-slate-100"
                       >
-                        “{current.quote}”
+                        &quot;{current.quote}&quot;
                       </motion.blockquote>
 
                       <figcaption className="text-xs text-slate-300/70">
@@ -344,6 +345,50 @@ export function TutorialSlideshow(props: {
                         />
                       </div>
                     ) : null}
+
+                    {current.imagesrc && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.8 }}
+                        className={`gap-x-2 ${
+                          current.imageFill
+                            ? "flex flex-col"
+                            : "flex flex-row items-start"
+                        }`}
+                      >
+                        {current.imageFill ? (
+                          // FULL-WIDTH IMAGE (fill)
+                          <div className="relative w-full aspect-[3/1]">
+                            <Image
+                              src={current.imagesrc}
+                              alt={current.imageDescription ?? current.imagesrc}
+                              fill
+                              sizes="100vw"
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          // SIDE-BY-SIDE IMAGE (fixed size)
+                          <Image
+                            src={current.imagesrc}
+                            alt={current.imageDescription ?? current.imagesrc}
+                            width={128}
+                            height={128}
+                            sizes="128px"
+                            className="object-contain shrink-0"
+                          />
+                        )}{" "}
+                        {current.imageDescription && (
+                          <div
+                            className="text-white/70 text-sm gap-y-4 flex flex-col max-w-sm text-pretty p-2"
+                            dangerouslySetInnerHTML={{
+                              __html: current.imageDescription,
+                            }}
+                          />
+                        )}
+                      </motion.div>
+                    )}
                   </div>
 
                   {(busy || finishingStep) && isLast ? (
@@ -353,7 +398,9 @@ export function TutorialSlideshow(props: {
                     >
                       <div className="flex items-center gap-3 rounded-2xl bg-black/40 px-4 py-3 text-sm text-white/90">
                         <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
-                        <div className="font-medium tracking-tight">Continuing…</div>
+                        <div className="font-medium tracking-tight">
+                          Continuing…
+                        </div>
                       </div>
                     </div>
                   ) : null}
@@ -362,9 +409,7 @@ export function TutorialSlideshow(props: {
             </div>
           </div>
 
-          <div
-            className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70"
-          >
+          <div className="mt-7 flex flex-col gap-y-4 md:flex-row items-center justify-between text-xs text-slate-300/70">
             <div>
               {Array.from({ length: slides.length }).map((_, i) => (
                 <span
@@ -376,7 +421,9 @@ export function TutorialSlideshow(props: {
                 />
               ))}
             </div>
-            <div className={busy || finishingStep ? "opacity-80" : "animate-pulse"}>
+            <div
+              className={busy || finishingStep ? "opacity-80" : "animate-pulse"}
+            >
               {busy || finishingStep ? "Continuing…" : footerCta}
             </div>
           </div>
