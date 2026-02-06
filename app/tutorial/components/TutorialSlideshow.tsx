@@ -274,7 +274,7 @@ export function TutorialSlideshow(props: {
           </header>
 
           <div className="min-h-0 flex items-center py-6">
-            <div className="relative min-h-0 w-full">
+            <div className="relative min-h-0 w-full max-h-[calc(100dvh-220px)] overflow-y-scroll">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={safeIndex}
@@ -363,13 +363,42 @@ export function TutorialSlideshow(props: {
                 </motion.div>
               </AnimatePresence>
               {current.imagesrc && (
-                <div>
-                  <Image
-                    src={current.imagesrc}
-                    alt={current.imageDescription ?? current.imagesrc}
-                  />
+                <div
+                  className={`gap-x-2 p-4 ${
+                    current.imageFill
+                      ? "flex flex-col"
+                      : "flex flex-row items-start"
+                  }`}
+                >
+                  {current.imageFill ? (
+                    // FULL-WIDTH IMAGE (fill)
+                    <div className="relative w-full aspect-[3/1]">
+                      <Image
+                        src={current.imagesrc}
+                        alt={current.imageDescription ?? current.imagesrc}
+                        fill
+                        sizes="100vw"
+                        className="object-contain"
+                      />
+                    </div>
+                  ) : (
+                    // SIDE-BY-SIDE IMAGE (fixed size)
+                    <Image
+                      src={current.imagesrc}
+                      alt={current.imageDescription ?? current.imagesrc}
+                      width={128}
+                      height={128}
+                      sizes="128px"
+                      className="object-contain shrink-0"
+                    />
+                  )}{" "}
                   {current.imageDescription && (
-                    <div>{current.imageDescription}</div>
+                    <div
+                      className="text-white/70 text-sm gap-y-4 flex flex-col max-w-sm text-pretty p-2"
+                      dangerouslySetInnerHTML={{
+                        __html: current.imageDescription,
+                      }}
+                    />
                   )}
                 </div>
               )}

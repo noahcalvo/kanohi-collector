@@ -10,6 +10,7 @@ export type TutorialCopyBlock = {
     body?: string;
     imagesrc?: string;
     imageDescription?: string;
+    imageFill?: boolean;
   }>;
 };
 
@@ -54,15 +55,24 @@ export const TUTORIAL_COPY: Record<
         quote:
           "Each of us will tell a tale of the Toa's search for the Kanohi Nuva.",
         source: "Turaga Vakama, BIONICLE Chronicles #4: Tales of the Masks",
-        body: "Masks known as Kanohi are artifacts, defined by the quests required to obtain them. In Kanohi Collector, your goal is just that: collect kanohi",
-        imagesrc: "masks/1.png",
+        body: "Masks known as Kanohi provide buffs in this game.",
+        imagesrc: "/tutorial/colorless-mask.png",
         imageDescription:
-          "<h2>Kanohi Hau</h2><p>The Great Mask of Shielding, when equipped allows for larger storage of unopened mask packs</p>",
+          "<h2 style='font-size:18px; font-weight:bold'>Kanohi Hau</h2><p>The Great Mask of Shielding, when equipped allows for larger storage of unopened mask packs.</p>",
       },
       {
         quote: "A Turaga carries wisdom, not strength.",
         source: "BIONICLE 4: Tales of the Masks",
-        body: "<p style='margin-bottom: 8px;'>You have two slots to equip masks from your collection</p><div syle='display:flex'><div><b>Toa</b><p>Grants 100% of the mask's buff</p></div><div><b>Turaga</b><p>Grants only half of the masks original buff</p></div>",
+        body: "<p style='margin-bottom: 12px;'>You can equip two masks from your collection:</p><div style='display:flex; gap:8px;'><div style='border border-color:gray; border-width: 1px; padding:4px;'><b style='font-size:22px;'>Toa</b><p style='text-wrap:balance;'>Grants 100% of the mask's buff</p></div><div style='border border-color:gray; border-width: 1px; padding:4px;'><b style='font-size:22px'>Turaga</b><p style='text-wrap:balance;'>Grants only half of the masks original buff</p></div>",
+      },
+      {
+        quote: "The new Kanohi looked gray and lifeless, lying in the snow.",
+        source: "BIONICLE Chronicles #1: Tale of the Toa",
+        body: "Masks are discovered in a neutral, gray color. Bionicles change the color of the mask they wear.",
+        imagesrc: "/tutorial/colored-hau.png",
+        imageFill: true,
+        imageDescription:
+          "There are six colors to collect for most common and rare masks.",
       },
 
       {
